@@ -1,0 +1,12 @@
+{
+  "include": ["src", "examples", "tests"],
+  "extraPaths": ["src"],
+  "typeCheckingMode": "strict",
+  "reportMissingTypeStubs": false,
+  "reportUnknownMemberType": false,
+  "reportUnknownArgumentType": false,
+  "reportUnknownVariableType": false,
+  "reportUnknownParameterType": false,
+  "reportPrivateUsage": false,
+  "reportUnnecessaryTypeIgnoreComment": false
+}

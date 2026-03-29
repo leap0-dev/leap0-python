@@ -1,0 +1,6 @@
+DEFAULT_BASE_URL = "https://api.leap0.dev"
+DEFAULT_SANDBOX_DOMAIN = "sandbox.leap0.dev"
+DEFAULT_TEMPLATE_NAME = "system/code-interpreter:v0.1.0"
+DEFAULT_VCPU = 1
+DEFAULT_MEMORY_MIB = 1024
+DEFAULT_TIMEOUT_MIN = 5

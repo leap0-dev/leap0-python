@@ -1,0 +1,286 @@
+from __future__ import annotations
+
+from typing import Any
+
+from ._transport import Transport
+from ._types import GitCommitResponseDict, GitResultDict
+from .models import GitCommitResult, GitResult, SandboxRef, sandbox_id_of
+
+
+class GitClient:
+    """Clone repositories, inspect diffs and history, manage branches, stage
+    files, commit, push, and pull inside a running sandbox.
+    """
+
+    def __init__(self, transport: Transport):
+        self._transport = transport
+
+    def _git_result(self, path: str, payload: dict[str, Any]) -> GitResult:
+        data: GitResultDict = self._transport.request_json("POST", path, json=payload)  # type: ignore[assignment]
+        return GitResult.from_dict(data)
+
+    def clone(
+        self,
+        sandbox: SandboxRef,
+        *,
+        url: str,
+        path: str,
+        branch: str | None = None,
+        commit_id: str | None = None,
+        depth: int | None = None,
+        username: str | None = None,
+        password: str | None = None,
+    ) -> GitResult:
+        """Clone a remote repository into the sandbox.
+
+        Args:
+            sandbox: Sandbox ID or object.
+            url: Repository URL.
+            path: Destination path inside the sandbox.
+            branch: Branch to clone.
+            commit_id: Specific commit to checkout after cloning.
+            depth: Shallow clone depth.
+            username: Auth username (for private repos).
+            password: Auth password or token (for private repos).
+        """
+        payload: dict[str, Any] = {"url": url, "path": path}
+        if branch is not None:
+            payload["branch"] = branch
+        if commit_id is not None:
+            payload["commit_id"] = commit_id
+        if depth is not None:
+            payload["depth"] = depth
+        if username is not None:
+            payload["username"] = username
+        if password is not None:
+            payload["password"] = password
+        return self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/clone", payload)
+
+    def status(self, sandbox: SandboxRef, *, path: str) -> GitResult:
+        """Get the current repository status (porcelain v2 format)."""
+        return self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/status", {"path": path})
+
+    def branches(
+        self,
+        sandbox: SandboxRef,
+        *,
+        path: str,
+        branch_type: str = "local",
+        contains: str | None = None,
+        not_contains: str | None = None,
+    ) -> GitResult:
+        """List branches in the repository.
+
+        Args:
+            sandbox: Sandbox ID or object.
+            path: Path to the git repo.
+            branch_type: Filter by ``"local"``, ``"remote"``, or ``"all"``.
+            contains: Only branches containing this commit SHA.
+            not_contains: Exclude branches containing this commit SHA.
+        """
+        payload: dict[str, Any] = {"path": path, "branch_type": branch_type}
+        if contains is not None:
+            payload["contains"] = contains
+        if not_contains is not None:
+            payload["not_contains"] = not_contains
+        return self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/branches", payload)
+
+    def diff_unstaged(self, sandbox: SandboxRef, *, path: str, context_lines: int | None = None) -> GitResult:
+        """Show working tree changes that are not staged yet."""
+        payload: dict[str, Any] = {"path": path}
+        if context_lines is not None:
+            payload["context_lines"] = context_lines
+        return self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/diff-unstaged", payload)
+
+    def diff_staged(self, sandbox: SandboxRef, *, path: str, context_lines: int | None = None) -> GitResult:
+        """Show changes that are already staged for the next commit."""
+        payload: dict[str, Any] = {"path": path}
+        if context_lines is not None:
+            payload["context_lines"] = context_lines
+        return self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/diff-staged", payload)
+
+    def diff(self, sandbox: SandboxRef, *, path: str, target: str, context_lines: int | None = None) -> GitResult:
+        """Compare the current state against a branch, tag, or commit."""
+        payload: dict[str, Any] = {"path": path, "target": target}
+        if context_lines is not None:
+            payload["context_lines"] = context_lines
+        return self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/diff", payload)
+
+    def reset(self, sandbox: SandboxRef, *, path: str) -> GitResult:
+        """Unstage all currently staged changes."""
+        return self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/reset", {"path": path})
+
+    def log(
+        self,
+        sandbox: SandboxRef,
+        *,
+        path: str,
+        max_count: int | None = None,
+        start_timestamp: str | None = None,
+        end_timestamp: str | None = None,
+    ) -> GitResult:
+        """Show commit history with optional limits and date filters.
+
+        Args:
+            sandbox: Sandbox ID or object.
+            path: Path to the git repo.
+            max_count: Maximum number of commits to return (default 10).
+            start_timestamp: Start timestamp filter.
+            end_timestamp: End timestamp filter.
+        """
+        payload: dict[str, Any] = {"path": path}
+        if max_count is not None:
+            payload["max_count"] = max_count
+        if start_timestamp is not None:
+            payload["start_timestamp"] = start_timestamp
+        if end_timestamp is not None:
+            payload["end_timestamp"] = end_timestamp
+        return self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/log", payload)
+
+    def show(self, sandbox: SandboxRef, *, path: str, revision: str = "HEAD") -> GitResult:
+        """Show the full output for a commit, branch, or tag revision."""
+        return self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/show", {"path": path, "revision": revision})
+
+    def create_branch(
+        self,
+        sandbox: SandboxRef,
+        *,
+        path: str,
+        name: str,
+        checkout: bool | None = None,
+        base_branch: str | None = None,
+    ) -> GitResult:
+        """Create a new branch.
+
+        Args:
+            sandbox: Sandbox ID or object.
+            path: Path to the git repo.
+            name: New branch name.
+            checkout: Switch to the new branch immediately.
+            base_branch: Branch from a specific revision.
+        """
+        payload: dict[str, Any] = {"path": path, "name": name}
+        if checkout is not None:
+            payload["checkout"] = checkout
+        if base_branch is not None:
+            payload["base_branch"] = base_branch
+        return self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/create-branch", payload)
+
+    def checkout_branch(self, sandbox: SandboxRef, *, path: str, branch: str, create: bool | None = None) -> GitResult:
+        """Switch to an existing branch. Set *create* to create it if it does not exist."""
+        payload: dict[str, Any] = {"path": path, "branch": branch}
+        if create is not None:
+            payload["create"] = create
+        return self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/checkout-branch", payload)
+
+    def delete_branch(self, sandbox: SandboxRef, *, path: str, name: str, force: bool = False) -> GitResult:
+        """Delete a branch. Set *force* to delete even if unmerged."""
+        return self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/delete-branch", {"path": path, "name": name, "force": force})
+
+    def add(self, sandbox: SandboxRef, *, path: str, files: list[str]) -> GitResult:
+        """Stage files for the next commit."""
+        return self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/add", {"path": path, "files": files})
+
+    def commit(
+        self,
+        sandbox: SandboxRef,
+        *,
+        path: str,
+        message: str,
+        author: str | None = None,
+        email: str | None = None,
+        allow_empty: bool | None = None,
+    ) -> GitCommitResult:
+        """Create a commit from staged changes.
+
+        Args:
+            sandbox: Sandbox ID or object.
+            path: Path to the git repo.
+            message: Commit message.
+            author: Author name.
+            email: Author email.
+            allow_empty: Allow creating an empty commit.
+        """
+        payload: dict[str, Any] = {"path": path, "message": message}
+        if author is not None:
+            payload["author"] = author
+        if email is not None:
+            payload["email"] = email
+        if allow_empty is not None:
+            payload["allow_empty"] = allow_empty
+        data: GitCommitResponseDict = self._transport.request_json(  # type: ignore[assignment]
+            "POST",
+            f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/commit",
+            json=payload,
+        )
+        return GitCommitResult.from_dict(data)
+
+    def push(
+        self,
+        sandbox: SandboxRef,
+        *,
+        path: str,
+        remote: str | None = None,
+        branch: str | None = None,
+        set_upstream: bool | None = None,
+        username: str | None = None,
+        password: str | None = None,
+    ) -> GitResult:
+        """Push commits to a remote.
+
+        Args:
+            sandbox: Sandbox ID or object.
+            path: Path to the git repo.
+            remote: Remote name (default ``"origin"``).
+            branch: Branch name.
+            set_upstream: Set upstream tracking.
+            username: Auth username.
+            password: Auth password or token.
+        """
+        payload: dict[str, Any] = {"path": path}
+        if remote is not None:
+            payload["remote"] = remote
+        if branch is not None:
+            payload["branch"] = branch
+        if set_upstream is not None:
+            payload["set_upstream"] = set_upstream
+        if username is not None:
+            payload["username"] = username
+        if password is not None:
+            payload["password"] = password
+        return self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/push", payload)
+
+    def pull(
+        self,
+        sandbox: SandboxRef,
+        *,
+        path: str,
+        remote: str | None = None,
+        branch: str | None = None,
+        rebase: bool | None = None,
+        username: str | None = None,
+        password: str | None = None,
+    ) -> GitResult:
+        """Pull commits from a remote. Set *rebase* to rebase instead of merge.
+
+        Args:
+            sandbox: Sandbox ID or object.
+            path: Path to the git repo.
+            remote: Remote name (default ``"origin"``).
+            branch: Branch name.
+            rebase: Rebase instead of merge.
+            username: Auth username.
+            password: Auth password or token.
+        """
+        payload: dict[str, Any] = {"path": path}
+        if remote is not None:
+            payload["remote"] = remote
+        if branch is not None:
+            payload["branch"] = branch
+        if rebase is not None:
+            payload["rebase"] = rebase
+        if username is not None:
+            payload["username"] = username
+        if password is not None:
+            payload["password"] = password
+        return self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/pull", payload)
