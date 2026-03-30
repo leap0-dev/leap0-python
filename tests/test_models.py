@@ -52,27 +52,27 @@ from leap0.models import (
 
 class TestSandboxIdOf:
     def test_from_string(self):
-        assert sandbox_id_of("sbx_123") == "sbx_123"
+        assert sandbox_id_of("sbx-123") == "sbx-123"
 
     def test_from_sandbox(self):
-        s = Sandbox(id="sbx_abc")
-        assert sandbox_id_of(s) == "sbx_abc"
+        s = Sandbox(id="sbx-abc")
+        assert sandbox_id_of(s) == "sbx-abc"
 
     def test_from_sandbox_status(self):
         s = SandboxStatus(
-            id="sbx_xyz", template_id="t", vcpu=1, memory_mib=512,
+            id="sbx-xyz", template_id="t", vcpu=1, memory_mib=512,
             disk_mib=10240, state="running", auto_pause=False, created_at="",
         )
-        assert sandbox_id_of(s) == "sbx_xyz"
+        assert sandbox_id_of(s) == "sbx-xyz"
 
 
 class TestSnapshotIdOf:
     def test_from_string(self):
-        assert snapshot_id_of("snap_123") == "snap_123"
+        assert snapshot_id_of("snap-123") == "snap-123"
 
     def test_from_snapshot(self):
-        s = Snapshot(snapshot_id="snap_abc", name="my-snap")
-        assert snapshot_id_of(s) == "snap_abc"
+        s = Snapshot(snapshot_id="snap-abc", name="my-snap")
+        assert snapshot_id_of(s) == "snap-abc"
 
 
 # Sandbox
@@ -80,8 +80,8 @@ class TestSnapshotIdOf:
 class TestSandbox:
     def test_full_dict(self):
         data = {
-            "id": "sbx_1",
-            "template_id": "tpl_1",
+            "id": "sbx-1",
+            "template_id": "tpl-1",
             "vcpu": 2,
             "memory_mib": 2048,
             "disk_mib": 10240,
@@ -91,8 +91,8 @@ class TestSandbox:
             "network_policy": {"mode": "allow-all"},
         }
         s = Sandbox.from_dict(data)  # type: ignore[arg-type]
-        assert s.id == "sbx_1"
-        assert s.template_id == "tpl_1"
+        assert s.id == "sbx-1"
+        assert s.template_id == "tpl-1"
         assert s.vcpu == 2
         assert s.memory_mib == 2048
         assert s.disk_mib == 10240
@@ -102,9 +102,9 @@ class TestSandbox:
         assert s.network_policy == {"mode": "allow-all"}
 
     def test_minimal_dict(self):
-        data = {"id": "sbx_2"}
+        data = {"id": "sbx-2"}
         s = Sandbox.from_dict(data)  # type: ignore[arg-type]
-        assert s.id == "sbx_2"
+        assert s.id == "sbx-2"
         assert s.template_id == ""
         assert s.vcpu == 0
         assert s.state == "starting"
@@ -117,8 +117,8 @@ class TestSandbox:
 class TestSandboxStatus:
     def test_full_dict(self):
         data = {
-            "id": "sbx_1",
-            "template_id": "tpl_1",
+            "id": "sbx-1",
+            "template_id": "tpl-1",
             "vcpu": 4,
             "memory_mib": 4096,
             "disk_mib": 10240,
@@ -127,15 +127,15 @@ class TestSandboxStatus:
             "created_at": "2025-01-01",
         }
         s = SandboxStatus.from_dict(data)  # type: ignore[arg-type]
-        assert s.id == "sbx_1"
+        assert s.id == "sbx-1"
         assert s.state == "paused"
         assert s.vcpu == 4
 
     def test_tolerant_parsing_missing_keys(self):
         """SandboxStatus.from_dict should not raise on missing keys."""
-        data = {"id": "sbx_3"}
+        data = {"id": "sbx-3"}
         s = SandboxStatus.from_dict(data)  # type: ignore[arg-type]
-        assert s.id == "sbx_3"
+        assert s.id == "sbx-3"
         assert s.template_id == ""
         assert s.vcpu == 0
         assert s.memory_mib == 0
@@ -154,14 +154,14 @@ class TestSandboxStatus:
 
 class TestSnapshot:
     def test_id_property(self):
-        s = Snapshot(snapshot_id="snap_1", name="test")
-        assert s.id == "snap_1"
+        s = Snapshot(snapshot_id="snap-1", name="test")
+        assert s.id == "snap-1"
 
     def test_from_dict_full(self):
         data = {
-            "snapshot_id": "snap_1",
+            "snapshot_id": "snap-1",
             "name": "my-snap",
-            "template_id": "tpl_1",
+            "template_id": "tpl-1",
             "vcpu": 2,
             "memory_mib": 1024,
             "disk_mib": 10240,
@@ -169,7 +169,7 @@ class TestSnapshot:
             "created_at": "2025-01-01",
         }
         s = Snapshot.from_dict(data)  # type: ignore[arg-type]
-        assert s.snapshot_id == "snap_1"
+        assert s.snapshot_id == "snap-1"
         assert s.name == "my-snap"
         assert s.network_policy == {"mode": "deny-all"}
 
@@ -355,25 +355,25 @@ class TestProcessResult:
 class TestSshAccess:
     def test_from_dict(self):
         data = {
-            "id": "ssh_1",
+            "id": "ssh-1",
             "password": "secret",
             "ssh_command": "ssh user@host",
-            "sandbox_id": "sbx_1",
+            "sandbox_id": "sbx-1",
             "expires_at": "2025-12-31",
             "created_at": "2025-01-01",
             "updated_at": "2025-01-01",
         }
         s = SshAccess.from_dict(data)  # type: ignore[arg-type]
-        assert s.id == "ssh_1"
+        assert s.id == "ssh-1"
         assert s.password == "secret"
         assert s.ssh_command == "ssh user@host"
 
 
 class TestSshValidation:
     def test_from_dict(self):
-        v = SshValidation.from_dict({"valid": True, "sandbox_id": "sbx_1"})  # type: ignore[arg-type]
+        v = SshValidation.from_dict({"valid": True, "sandbox_id": "sbx-1"})  # type: ignore[arg-type]
         assert v.valid is True
-        assert v.sandbox_id == "sbx_1"
+        assert v.sandbox_id == "sbx-1"
 
     def test_empty_dict(self):
         v = SshValidation.from_dict({})  # type: ignore[arg-type]
@@ -450,7 +450,7 @@ class TestImageConfig:
 class TestTemplate:
     def test_from_dict_full(self):
         data = {
-            "id": "tpl_1",
+            "id": "tpl-1",
             "name": "my-template",
             "digest": "sha256:abc",
             "image_config": {"entrypoint": ["/bin/sh"]},
@@ -458,13 +458,13 @@ class TestTemplate:
             "created_at": "2025-01-01",
         }
         t = Template.from_dict(data)  # type: ignore[arg-type]
-        assert t.id == "tpl_1"
+        assert t.id == "tpl-1"
         assert t.name == "my-template"
         assert t.image_config is not None
         assert t.image_config.entrypoint == ["/bin/sh"]
 
     def test_from_dict_null_image_config(self):
-        data = {"id": "tpl_2", "name": "t2", "digest": "", "image_config": None, "is_system": True, "created_at": ""}
+        data = {"id": "tpl-2", "name": "t2", "digest": "", "image_config": None, "is_system": True, "created_at": ""}
         t = Template.from_dict(data)  # type: ignore[arg-type]
         assert t.image_config is None
         assert t.is_system is True

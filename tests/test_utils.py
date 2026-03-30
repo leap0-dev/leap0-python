@@ -100,24 +100,24 @@ class TestIterNdjson:
 
 class TestSandboxBaseUrl:
     def test_basic(self):
-        url = sandbox_base_url("sbx_123", "sandbox.leap0.dev")
-        assert url == "https://sbx_123.sandbox.leap0.dev"
+        url = sandbox_base_url("sbx-123", "sandbox.leap0.dev")
+        assert url == "https://sbx-123.sandbox.leap0.dev"
 
     def test_with_port(self):
-        url = sandbox_base_url("sbx_123", "sandbox.leap0.dev", port=8080)
-        assert url == "https://8080-sbx_123.sandbox.leap0.dev"
+        url = sandbox_base_url("sbx-123", "sandbox.leap0.dev", port=8080)
+        assert url == "https://sbx-123-8080.sandbox.leap0.dev"
 
     def test_strips_trailing_slash(self):
-        url = sandbox_base_url("sbx_123", "sandbox.leap0.dev/")
-        assert url == "https://sbx_123.sandbox.leap0.dev"
+        url = sandbox_base_url("sbx-123", "sandbox.leap0.dev/")
+        assert url == "https://sbx-123.sandbox.leap0.dev"
 
     def test_raises_on_missing_domain(self):
         with pytest.raises(ValueError, match="sandbox_domain is required"):
-            sandbox_base_url("sbx_123", None)
+            sandbox_base_url("sbx-123", None)
 
     def test_raises_on_empty_domain(self):
         with pytest.raises(ValueError, match="sandbox_domain is required"):
-            sandbox_base_url("sbx_123", "")
+            sandbox_base_url("sbx-123", "")
 
 
 class TestWebsocketUrlFromHttp:

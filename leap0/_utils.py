@@ -28,9 +28,8 @@ def ensure_leading_slash(value: str) -> str:
 def sandbox_base_url(sandbox_id: str, sandbox_domain: str | None, *, port: int | None = None) -> str:
     if not sandbox_domain:
         raise ValueError("sandbox_domain is required for sandbox host operations")
-    host = f"{sandbox_id}.{sandbox_domain.strip('/')}"
-    if port is not None:
-        host = f"{port}-{host}"
+    subdomain = f"{sandbox_id}-{port}" if port is not None else sandbox_id
+    host = f"{subdomain}.{sandbox_domain.strip('/')}"
     return f"https://{host}"
 
 
