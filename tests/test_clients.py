@@ -30,7 +30,7 @@ class TestSandboxesClient:
     def test_create_url_and_payload(self):
         t = _mock_transport()
         t.request_json.return_value = {
-            "id": "sbx_1", "template_id": "tpl_1", "vcpu": 2, "memory_mib": 2048,
+            "id": "sbx-1", "template_id": "tpl-1", "vcpu": 2, "memory_mib": 2048,
             "disk_mib": 10240, "state": "starting", "auto_pause": False, "created_at": "",
         }
         client = SandboxesClient(t, sandbox_domain="sandbox.leap0.dev")
@@ -43,72 +43,72 @@ class TestSandboxesClient:
         assert kwargs["json"]["template_name"] == "my-tpl"
         assert kwargs["json"]["vcpu"] == 2
         assert kwargs["expected_status"] == 201
-        assert result.id == "sbx_1"
+        assert result.id == "sbx-1"
 
     def test_get_url(self):
         t = _mock_transport()
         t.request_json.return_value = {
-            "id": "sbx_1", "template_id": "t", "vcpu": 1, "memory_mib": 512,
+            "id": "sbx-1", "template_id": "t", "vcpu": 1, "memory_mib": 512,
             "disk_mib": 10240, "state": "running", "auto_pause": False, "created_at": "",
         }
         client = SandboxesClient(t, sandbox_domain="sandbox.leap0.dev")
-        client.get("sbx_1")
+        client.get("sbx-1")
 
         args, kwargs = t.request_json.call_args
         assert args[0] == "GET"
-        assert args[1] == "/v1/sandbox/sbx_1/"
+        assert args[1] == "/v1/sandbox/sbx-1/"
 
     def test_delete_url(self):
         t = _mock_transport()
         t.request.return_value = MagicMock(status_code=204)
         client = SandboxesClient(t, sandbox_domain="sandbox.leap0.dev")
-        client.delete("sbx_1")
+        client.delete("sbx-1")
 
         args, kwargs = t.request.call_args
         assert args[0] == "DELETE"
-        assert args[1] == "/v1/sandbox/sbx_1/"
+        assert args[1] == "/v1/sandbox/sbx-1/"
         assert kwargs["expected_status"] == 204
 
     def test_pause_url(self):
         t = _mock_transport()
         t.request_json.return_value = {
-            "id": "sbx_1", "template_id": "t", "vcpu": 1, "memory_mib": 512,
+            "id": "sbx-1", "template_id": "t", "vcpu": 1, "memory_mib": 512,
             "disk_mib": 10240, "state": "paused", "auto_pause": False, "created_at": "",
         }
         client = SandboxesClient(t, sandbox_domain="sandbox.leap0.dev")
-        client.pause("sbx_1")
+        client.pause("sbx-1")
 
         args, kwargs = t.request_json.call_args
         assert args[0] == "POST"
-        assert args[1] == "/v1/sandbox/sbx_1/pause"
+        assert args[1] == "/v1/sandbox/sbx-1/pause"
 
     def test_invoke_url(self):
         client = SandboxesClient(_mock_transport(), sandbox_domain="sandbox.leap0.dev")
-        url = client.invoke_url("sbx_1", "/api/health")
-        assert url == "https://sbx_1.sandbox.leap0.dev/api/health"
+        url = client.invoke_url("sbx-1", "/api/health")
+        assert url == "https://sbx-1.sandbox.leap0.dev/api/health"
 
     def test_invoke_url_with_port(self):
         client = SandboxesClient(_mock_transport(), sandbox_domain="sandbox.leap0.dev")
-        url = client.invoke_url("sbx_1", "/api", port=3000)
-        assert url == "https://3000-sbx_1.sandbox.leap0.dev/api"
+        url = client.invoke_url("sbx-1", "/api", port=3000)
+        assert url == "https://sbx-1-3000.sandbox.leap0.dev/api"
 
     def test_websocket_url(self):
         client = SandboxesClient(_mock_transport(), sandbox_domain="sandbox.leap0.dev")
-        url = client.websocket_url("sbx_1", "/ws")
-        assert url == "wss://sbx_1.sandbox.leap0.dev/ws"
+        url = client.websocket_url("sbx-1", "/ws")
+        assert url == "wss://sbx-1.sandbox.leap0.dev/ws"
 
     def test_accepts_sandbox_object(self):
         t = _mock_transport()
         t.request_json.return_value = {
-            "id": "sbx_1", "template_id": "t", "vcpu": 1, "memory_mib": 512,
+            "id": "sbx-1", "template_id": "t", "vcpu": 1, "memory_mib": 512,
             "disk_mib": 10240, "state": "running", "auto_pause": False, "created_at": "",
         }
         client = SandboxesClient(t, sandbox_domain="sandbox.leap0.dev")
-        sandbox = Sandbox(id="sbx_obj")
+        sandbox = Sandbox(id="sbx-obj")
         client.get(sandbox)
 
         args, _ = t.request_json.call_args
-        assert "sbx_obj" in args[1]
+        assert "sbx-obj" in args[1]
 
 
 # SnapshotsClient
@@ -117,22 +117,22 @@ class TestSnapshotsClient:
     def test_create_url(self):
         t = _mock_transport()
         t.request_json.return_value = {
-            "snapshot_id": "snap_1", "name": "s", "template_id": "t",
+            "snapshot_id": "snap-1", "name": "s", "template_id": "t",
             "vcpu": 1, "memory_mib": 512, "disk_mib": 10240,
             "network_policy": None, "created_at": "",
         }
         client = SnapshotsClient(t)
-        client.create("sbx_1", name="my-snap")
+        client.create("sbx-1", name="my-snap")
 
         args, kwargs = t.request_json.call_args
         assert args[0] == "POST"
-        assert args[1] == "/v1/sandbox/sbx_1/snapshot/create"
+        assert args[1] == "/v1/sandbox/sbx-1/snapshot/create"
         assert kwargs["json"]["name"] == "my-snap"
 
     def test_resume_url(self):
         t = _mock_transport()
         t.request_json.return_value = {
-            "id": "sbx_new", "template_id": "t", "vcpu": 1, "memory_mib": 512,
+            "id": "sbx-new", "template_id": "t", "vcpu": 1, "memory_mib": 512,
             "disk_mib": 10240, "state": "starting", "auto_pause": False, "created_at": "",
         }
         client = SnapshotsClient(t)
@@ -147,21 +147,21 @@ class TestSnapshotsClient:
         t = _mock_transport()
         t.request.return_value = MagicMock(status_code=204)
         client = SnapshotsClient(t)
-        client.delete("snap_1")
+        client.delete("snap-1")
 
         args, kwargs = t.request.call_args
         assert args[0] == "DELETE"
-        assert args[1] == "/v1/snapshot/snap_1"
+        assert args[1] == "/v1/snapshot/snap-1"
 
     def test_delete_accepts_snapshot_object(self):
         t = _mock_transport()
         t.request.return_value = MagicMock(status_code=204)
         client = SnapshotsClient(t)
-        snap = Snapshot(snapshot_id="snap_obj", name="n")
+        snap = Snapshot(snapshot_id="snap-obj", name="n")
         client.delete(snap)
 
         args, _ = t.request.call_args
-        assert "snap_obj" in args[1]
+        assert "snap-obj" in args[1]
 
 
 # TemplatesClient
@@ -170,7 +170,7 @@ class TestTemplatesClient:
     def test_create_url_and_payload(self):
         t = _mock_transport()
         t.request_json.return_value = {
-            "id": "tpl_1", "name": "my-tpl", "digest": "sha256:abc",
+            "id": "tpl-1", "name": "my-tpl", "digest": "sha256:abc",
             "image_config": None, "is_system": False, "created_at": "",
         }
         client = TemplatesClient(t)
@@ -186,15 +186,15 @@ class TestTemplatesClient:
     def test_rename_url(self):
         t = _mock_transport()
         t.request_json.return_value = {
-            "id": "tpl_1", "name": "new-name", "digest": "",
+            "id": "tpl-1", "name": "new-name", "digest": "",
             "image_config": None, "is_system": False, "created_at": "",
         }
         client = TemplatesClient(t)
-        result = client.rename("tpl_1", name="new-name")
+        result = client.rename("tpl-1", name="new-name")
 
         args, kwargs = t.request_json.call_args
         assert args[0] == "PATCH"
-        assert args[1] == "/v1/template/tpl_1"
+        assert args[1] == "/v1/template/tpl-1"
         assert kwargs["json"] == {"name": "new-name"}
         assert result.name == "new-name"
 
@@ -202,11 +202,11 @@ class TestTemplatesClient:
         t = _mock_transport()
         t.request.return_value = MagicMock(status_code=204)
         client = TemplatesClient(t)
-        client.delete("tpl_1")
+        client.delete("tpl-1")
 
         args, kwargs = t.request.call_args
         assert args[0] == "DELETE"
-        assert args[1] == "/v1/template/tpl_1"
+        assert args[1] == "/v1/template/tpl-1"
         assert kwargs["expected_status"] == 204
 
 
@@ -217,18 +217,18 @@ class TestFilesystemClient:
         t = _mock_transport()
         t.request_json.return_value = {"items": []}
         client = FilesystemClient(t)
-        client.ls("sbx_1", path="/workspace")
+        client.ls("sbx-1", path="/workspace")
 
         args, kwargs = t.request_json.call_args
         assert args[0] == "POST"
-        assert args[1] == "/v1/sandbox/sbx_1/filesystem/ls"
+        assert args[1] == "/v1/sandbox/sbx-1/filesystem/ls"
         assert kwargs["json"]["path"] == "/workspace"
 
     def test_mkdir_url(self):
         t = _mock_transport()
         t.request.return_value = MagicMock(status_code=204)
         client = FilesystemClient(t)
-        client.mkdir("sbx_1", path="/workspace/src", recursive=True)
+        client.mkdir("sbx-1", path="/workspace/src", recursive=True)
 
         args, kwargs = t.request.call_args
         assert args[0] == "POST"
@@ -239,7 +239,7 @@ class TestFilesystemClient:
         t = _mock_transport()
         t.request_json.return_value = {"exists": True}
         client = FilesystemClient(t)
-        result = client.exists("sbx_1", path="/workspace/main.py")
+        result = client.exists("sbx-1", path="/workspace/main.py")
 
         assert result is True
         args, kwargs = t.request_json.call_args
@@ -249,7 +249,7 @@ class TestFilesystemClient:
         t = _mock_transport()
         t.request_json.return_value = {"items": ["/a.ts", "/b.ts"]}
         client = FilesystemClient(t)
-        result = client.glob("sbx_1", path="/workspace", pattern="*.ts")
+        result = client.glob("sbx-1", path="/workspace", pattern="*.ts")
 
         assert result == ["/a.ts", "/b.ts"]
 
@@ -258,7 +258,7 @@ class TestFilesystemClient:
         t.request_json.return_value = {"diff": "...", "replacements": 1}
         client = FilesystemClient(t)
         edits = [FileEdit(find="old", replace="new")]
-        client.edit_file("sbx_1", path="/a.py", edits=edits)
+        client.edit_file("sbx-1", path="/a.py", edits=edits)
 
         args, kwargs = t.request_json.call_args
         assert "/filesystem/edit-file" in args[1]
@@ -298,18 +298,18 @@ class TestGitClient:
         t = _mock_transport()
         t.request_json.return_value = {"output": "cloned", "exit_code": 0}
         client = GitClient(t)
-        client.clone("sbx_1", url="https://github.com/test/repo.git", path="/workspace/repo")
+        client.clone("sbx-1", url="https://github.com/test/repo.git", path="/workspace/repo")
 
         args, kwargs = t.request_json.call_args
         assert args[0] == "POST"
-        assert args[1] == "/v1/sandbox/sbx_1/git/clone"
+        assert args[1] == "/v1/sandbox/sbx-1/git/clone"
         assert kwargs["json"]["url"] == "https://github.com/test/repo.git"
 
     def test_status_url(self):
         t = _mock_transport()
         t.request_json.return_value = {"output": "", "exit_code": 0}
         client = GitClient(t)
-        client.status("sbx_1", path="/workspace/repo")
+        client.status("sbx-1", path="/workspace/repo")
 
         args, kwargs = t.request_json.call_args
         assert "/git/status" in args[1]
@@ -322,7 +322,7 @@ class TestProcessClient:
         t = _mock_transport()
         t.request_json.return_value = {"exit_code": 0, "result": "hello"}
         client = ProcessClient(t)
-        result = client.execute("sbx_1", command="echo hello")
+        result = client.execute("sbx-1", command="echo hello")
 
         args, kwargs = t.request_json.call_args
         assert args[0] == "POST"
@@ -338,22 +338,22 @@ class TestSshClient:
     def test_create_access_url(self):
         t = _mock_transport()
         t.request_json.return_value = {
-            "id": "ssh_1", "password": "pw", "ssh_command": "ssh u@h",
-            "sandbox_id": "sbx_1",
+            "id": "ssh-1", "password": "pw", "ssh_command": "ssh u@h",
+            "sandbox_id": "sbx-1",
         }
         client = SshClient(t)
-        result = client.create_access("sbx_1")
+        result = client.create_access("sbx-1")
 
         args, kwargs = t.request_json.call_args
         assert args[0] == "POST"
         assert "/ssh/access" in args[1]
-        assert result.id == "ssh_1"
+        assert result.id == "ssh-1"
 
     def test_delete_access_url(self):
         t = _mock_transport()
         t.request.return_value = MagicMock(status_code=204)
         client = SshClient(t)
-        client.delete_access("sbx_1")
+        client.delete_access("sbx-1")
 
         args, kwargs = t.request.call_args
         assert args[0] == "DELETE"
