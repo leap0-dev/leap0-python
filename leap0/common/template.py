@@ -23,7 +23,7 @@ class RegistryCredentialsDict(TypedDict, total=False):
 class ImageConfigDict(TypedDict, total=False):
     entrypoint: list[str] | None
     cmd: list[str] | None
-    working_dir: str | None
+    working_dir: str
     user: str
     env: dict[str, Any] | None
 
@@ -41,7 +41,7 @@ class UploadTemplateResponseDict(TypedDict):
 class ImageConfig:
     entrypoint: list[str] = field(default_factory=list)
     cmd: list[str] = field(default_factory=list)
-    working_dir: str | None = None
+    working_dir: str = ""
     user: str = ""
     env: dict[str, Any] | None = None
 
@@ -50,7 +50,7 @@ class ImageConfig:
         return cls(
             entrypoint=data.get("entrypoint") or [],
             cmd=data.get("cmd") or [],
-            working_dir=data.get("working_dir"),
+            working_dir=data.get("working_dir", ""),
             user=data.get("user", ""),
             env=data.get("env"),
         )
