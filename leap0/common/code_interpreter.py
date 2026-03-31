@@ -10,6 +10,17 @@ from typing import Any, TypedDict
 _logger = logging.getLogger(__name__)
 
 
+def _decode_base64(data: str | None, label: str) -> bytes | None:
+    """Decode a base64 string, returning ``None`` on missing/invalid input."""
+    if not data:
+        return None
+    try:
+        return base64.b64decode(data)
+    except (binascii.Error, ValueError):
+        _logger.debug("Failed to decode %s base64 data", label)
+        return None
+
+
 class CodeLanguage(str, Enum):
     PYTHON = "python"
     TYPESCRIPT = "typescript"
@@ -123,31 +134,13 @@ class CodeExecutionOutput:
         return self.is_primary
 
     def png_bytes(self) -> bytes | None:
-        if not self.png:
-            return None
-        try:
-            return base64.b64decode(self.png)
-        except (binascii.Error, ValueError):
-            _logger.debug("Failed to decode png base64 data")
-            return None
+        return _decode_base64(self.png, "png")
 
     def jpeg_bytes(self) -> bytes | None:
-        if not self.jpeg:
-            return None
-        try:
-            return base64.b64decode(self.jpeg)
-        except (binascii.Error, ValueError):
-            _logger.debug("Failed to decode jpeg base64 data")
-            return None
+        return _decode_base64(self.jpeg, "jpeg")
 
     def pdf_bytes(self) -> bytes | None:
-        if not self.pdf:
-            return None
-        try:
-            return base64.b64decode(self.pdf)
-        except (binascii.Error, ValueError):
-            _logger.debug("Failed to decode pdf base64 data")
-            return None
+        return _decode_base64(self.pdf, "pdf")
 
 
 @dataclass(slots=True)

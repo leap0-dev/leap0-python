@@ -40,7 +40,7 @@ class TestSandboxStatus:
         assert s.state == "paused"
         assert s.vcpu == 4
 
-    def test_empty_dict(self):
-        s = SandboxStatus.from_dict({})
-        assert s.id == ""
-        assert s.state == "starting"
+    def test_empty_dict_raises(self):
+        import pytest
+        with pytest.raises(ValueError, match="missing required non-empty string 'id'"):
+            SandboxStatus.from_dict({})
