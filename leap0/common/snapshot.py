@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TypedDict
 
-from .sandbox import NetworkPolicyDict, SandboxState
+from .sandbox import NetworkPolicyDict, SandboxState, _parse_sandbox_state
 
 
 class SnapshotCreateResponseDict(TypedDict, total=False):
@@ -13,7 +13,7 @@ class SnapshotCreateResponseDict(TypedDict, total=False):
     vcpu: int
     memory_mib: int
     disk_mib: int
-    state: SandboxState
+    state: SandboxState | str
     created_at: str
     network_policy: NetworkPolicyDict | None
 
@@ -26,7 +26,7 @@ class Snapshot:
     vcpu: int = 0
     memory_mib: int = 0
     disk_mib: int = 0
-    state: SandboxState | str = ""
+    state: SandboxState | str = SandboxState.STARTING
     network_policy: NetworkPolicyDict | None = None
     created_at: str = ""
 
@@ -43,7 +43,7 @@ class Snapshot:
             vcpu=int(data.get("vcpu", 0)),
             memory_mib=int(data.get("memory_mib", 0)),
             disk_mib=int(data.get("disk_mib", 0)),
-            state=data.get("state", ""),
+            state=_parse_sandbox_state(data.get("state")),
             network_policy=data.get("network_policy"),
             created_at=data.get("created_at", ""),
         )

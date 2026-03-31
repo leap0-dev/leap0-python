@@ -5,7 +5,7 @@ from typing import Any
 from ._transport import Transport
 from ._utils.errors import intercept_errors
 from ._utils.url import file_uri as _file_uri
-from .common.lsp import LspResponse, LspSuccessResponseDict
+from .common.lsp import LspJsonRpcResponse, LspJsonRpcResponseDict, LspResponse, LspSuccessResponseDict
 from .common.sandbox import SandboxRef, sandbox_id_of
 
 
@@ -118,9 +118,9 @@ class LspClient:
         uri: str,
         line: int,
         character: int,
-    ) -> dict[str, Any]:
-        """Returns the raw JSON-RPC 2.0 response from the language server."""
-        return self._transport.request_json(
+    ) -> LspJsonRpcResponse:
+        """Returns the JSON-RPC 2.0 response from the language server."""
+        data: LspJsonRpcResponseDict = self._transport.request_json(  # type: ignore[assignment]
             "POST",
             f"/v1/sandbox/{sandbox_id_of(sandbox)}/lsp/completions",
             json={
@@ -130,6 +130,7 @@ class LspClient:
                 "position": {"line": line, "character": character},
             },
         )
+        return LspJsonRpcResponse.from_dict(data)
 
     @intercept_errors("Failed to get completions: ")
     def completions_path(
@@ -141,20 +142,21 @@ class LspClient:
         path: str,
         line: int,
         character: int,
-    ) -> dict[str, Any]:
+    ) -> LspJsonRpcResponse:
         """Like :meth:`completions` but accepts a file path instead of a URI."""
         return self.completions(sandbox, language_id=language_id, path_to_project=path_to_project, uri=_file_uri(path), line=line, character=character)
 
     @intercept_errors("Failed to get document symbols: ")
-    def document_symbols(self, sandbox: SandboxRef, *, language_id: str, path_to_project: str, uri: str) -> dict[str, Any]:
-        """Returns the raw JSON-RPC 2.0 response from the language server."""
-        return self._transport.request_json(
+    def document_symbols(self, sandbox: SandboxRef, *, language_id: str, path_to_project: str, uri: str) -> LspJsonRpcResponse:
+        """Returns the JSON-RPC 2.0 response from the language server."""
+        data: LspJsonRpcResponseDict = self._transport.request_json(  # type: ignore[assignment]
             "POST",
             f"/v1/sandbox/{sandbox_id_of(sandbox)}/lsp/document-symbols",
             json={"language_id": language_id, "path_to_project": path_to_project, "uri": uri},
         )
+        return LspJsonRpcResponse.from_dict(data)
 
     @intercept_errors("Failed to get document symbols: ")
-    def document_symbols_path(self, sandbox: SandboxRef, *, language_id: str, path_to_project: str, path: str) -> dict[str, Any]:
+    def document_symbols_path(self, sandbox: SandboxRef, *, language_id: str, path_to_project: str, path: str) -> LspJsonRpcResponse:
         """Like :meth:`document_symbols` but accepts a file path instead of a URI."""
         return self.document_symbols(sandbox, language_id=language_id, path_to_project=path_to_project, uri=_file_uri(path))

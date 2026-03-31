@@ -1,12 +1,26 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Literal, TypedDict
+from enum import Enum
+from typing import TypedDict
 
 from typing_extensions import NotRequired, Required
 
 
-SandboxState = Literal["starting", "running", "paused", "unpausing", "deleting", "deleted"]
+class SandboxState(str, Enum):
+    STARTING = "starting"
+    SNAPSHOTTING = "snapshotting"
+    RUNNING = "running"
+    PAUSED = "paused"
+    UNPAUSING = "unpausing"
+    DELETING = "deleting"
+    DELETED = "deleted"
+
+
+class NetworkPolicyMode(str, Enum):
+    ALLOW_ALL = "allow-all"
+    DENY_ALL = "deny-all"
+    CUSTOM = "custom"
 
 
 class TransformRuleDict(TypedDict, total=False):
@@ -16,7 +30,7 @@ class TransformRuleDict(TypedDict, total=False):
 
 
 class NetworkPolicyDict(TypedDict, total=False):
-    mode: Required[Literal["allow-all", "deny-all", "custom"]]
+    mode: Required[NetworkPolicyMode | str]
     allow_domains: NotRequired[list[str]]
     allow_cidrs: NotRequired[list[str]]
     transforms: NotRequired[list[TransformRuleDict]]
@@ -28,7 +42,7 @@ class SandboxCreateResponseDict(TypedDict):
     vcpu: int
     memory_mib: int
     disk_mib: int
-    state: SandboxState
+    state: SandboxState | str
     auto_pause: bool
     created_at: str
     network_policy: NetworkPolicyDict | None
@@ -40,7 +54,7 @@ class SandboxStatusResponseDict(TypedDict):
     vcpu: int
     memory_mib: int
     disk_mib: int
-    state: SandboxState
+    state: SandboxState | str
     auto_pause: bool
     created_at: str
 
@@ -52,21 +66,21 @@ class Sandbox:
     vcpu: int = 0
     memory_mib: int = 0
     disk_mib: int = 0
-    state: SandboxState = "starting"
+    state: SandboxState | str = SandboxState.STARTING
     auto_pause: bool = False
     created_at: str = ""
     network_policy: NetworkPolicyDict | None = None
 
     @classmethod
     def from_dict(cls, data: SandboxCreateResponseDict) -> Sandbox:
-        state = data.get("state", "starting")
+        state = _parse_sandbox_state(data.get("state"))
         return cls(
             id=data["id"],
             template_id=data.get("template_id", ""),
             vcpu=int(data.get("vcpu", 0)),
             memory_mib=int(data.get("memory_mib", 0)),
             disk_mib=int(data.get("disk_mib", 0)),
-            state=state,  # type: ignore[arg-type]
+            state=state,
             auto_pause=bool(data.get("auto_pause", False)),
             created_at=data.get("created_at", ""),
             network_policy=data.get("network_policy"),
@@ -80,26 +94,35 @@ class SandboxStatus:
     vcpu: int
     memory_mib: int
     disk_mib: int
-    state: SandboxState
+    state: SandboxState | str
     auto_pause: bool
     created_at: str
 
     @classmethod
     def from_dict(cls, data: SandboxStatusResponseDict) -> SandboxStatus:
-        state = data.get("state", "starting")
+        state = _parse_sandbox_state(data.get("state"))
         return cls(
             id=data.get("id", ""),
             template_id=data.get("template_id", ""),
             vcpu=int(data.get("vcpu", 0)),
             memory_mib=int(data.get("memory_mib", 0)),
             disk_mib=int(data.get("disk_mib", 0)),
-            state=state,  # type: ignore[arg-type]
+            state=state,
             auto_pause=bool(data.get("auto_pause", False)),
             created_at=data.get("created_at", ""),
         )
 
 
 SandboxRef = str | Sandbox | SandboxStatus
+
+
+def _parse_sandbox_state(value: SandboxState | str | None) -> SandboxState | str:
+    if value is None:
+        return SandboxState.STARTING
+    try:
+        return SandboxState(value)
+    except ValueError:
+        return str(value)
 
 
 def sandbox_id_of(value: SandboxRef) -> str:

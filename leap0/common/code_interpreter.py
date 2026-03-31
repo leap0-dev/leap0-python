@@ -2,10 +2,20 @@ from __future__ import annotations
 
 import base64
 from dataclasses import dataclass, field
-from typing import Any, Literal, TypedDict
+from enum import Enum
+from typing import Any, TypedDict
 
 
-LanguageLiteral = Literal["python", "typescript"]
+class CodeLanguage(str, Enum):
+    PYTHON = "python"
+    TYPESCRIPT = "typescript"
+
+
+class StreamEventType(str, Enum):
+    STDOUT = "stdout"
+    STDERR = "stderr"
+    EXIT = "exit"
+    ERROR = "error"
 
 
 class CodeExecutionOutputDict(TypedDict, total=False):
@@ -42,9 +52,6 @@ class CodeExecutionResultDict(TypedDict, total=False):
     execution_count: int | None
 
 
-StreamEventTypeLiteral = Literal["stdout", "stderr", "exit", "error"]
-
-
 class StreamEventDict(TypedDict, total=False):
     type: int | str
     data: str
@@ -64,10 +71,15 @@ class ListContextsResponseDict(TypedDict):
 _LANGUAGE_INT_TO_STR: dict[int, str] = {1: "python", 2: "typescript"}
 
 
-def _normalize_language(value: int | str | None) -> str:
+def _normalize_language(value: int | str | None) -> CodeLanguage | str:
     if isinstance(value, int):
-        return _LANGUAGE_INT_TO_STR.get(value, str(value))
-    return str(value) if value else ""
+        value = _LANGUAGE_INT_TO_STR.get(value, str(value))
+    if not value:
+        return ""
+    try:
+        return CodeLanguage(str(value))
+    except ValueError:
+        return str(value)
 
 
 @dataclass(slots=True)
@@ -174,12 +186,9 @@ class CodeExecutionResult:
 
 _STREAM_TYPE_INT_TO_STR: dict[int, str] = {0: "stdout", 1: "stderr", 2: "exit", 3: "error"}
 
-StreamEventType = Literal["stdout", "stderr", "exit", "error"]
-
-
 @dataclass(slots=True)
 class StreamEvent:
-    type: str
+    type: StreamEventType | str
     data: str = ""
     code: int | None = None
 
@@ -190,8 +199,12 @@ class StreamEvent:
             event_type = _STREAM_TYPE_INT_TO_STR.get(raw_type, str(raw_type))
         else:
             event_type = str(raw_type)
+        try:
+            parsed_type: StreamEventType | str = StreamEventType(event_type)
+        except ValueError:
+            parsed_type = event_type
         return cls(
-            type=event_type,
+            type=parsed_type,
             data=data.get("data", ""),
             code=data.get("code"),
         )
@@ -200,7 +213,7 @@ class StreamEvent:
 @dataclass(slots=True)
 class CodeContext:
     id: str
-    language: str = ""
+    language: CodeLanguage | str = ""
     cwd: str = ""
 
     @classmethod

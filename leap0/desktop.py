@@ -9,6 +9,7 @@ from ._transport import Transport
 from ._utils.errors import intercept_errors
 from ._utils.stream import iter_sse_events
 from ._utils.url import sandbox_base_url
+from .common.errors import Leap0Error
 from .common.desktop import (
     DesktopDisplayInfo,
     DesktopDisplayInfoDict,
@@ -358,6 +359,8 @@ class DesktopClient:
         response = self._transport.stream("GET", url)
         try:
             for event in iter_sse_events(response.iter_lines()):
+                if isinstance(event, str):
+                    raise Leap0Error("Desktop status stream error", body=event)
                 yield DesktopProcessStatusList.from_dict(cast(DesktopProcessStatusListDict, event))
         finally:
             response.close()
