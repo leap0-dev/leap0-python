@@ -60,7 +60,7 @@ class PtyConnection:
             return message.encode()
         if isinstance(message, bytes):
             return message
-        return b"".join(message)
+        raise TypeError(f"Unexpected message type from websocket: {type(message).__name__}")
 
     def close(self) -> None:
         self.websocket.close()

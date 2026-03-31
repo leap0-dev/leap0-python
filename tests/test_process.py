@@ -9,4 +9,4 @@ class TestProcessClient:
         result = ProcessClient(mock_transport).execute("sbx-1", command="echo hello")
         assert result.exit_code == 0
         assert result.result == "hello"
-        assert "/process/execute" in mock_transport.request_json.call_args[0][1]
+        assert mock_transport.request_json.call_args[0][:2] == ("POST", "/v1/sandbox/sbx-1/process/execute")

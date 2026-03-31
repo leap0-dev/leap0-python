@@ -7,7 +7,6 @@ from websockets.sync.client import connect
 from ._transport import Transport
 from ._utils.errors import intercept_errors
 from ._utils.url import websocket_url_from_http
-from .common.errors import Leap0WebSocketError
 from .common.pty import PtyConnection, PtyListResponseDict, PtySession, PtySessionInfoDict
 from .common.sandbox import SandboxRef, sandbox_id_of
 
@@ -97,8 +96,5 @@ class PtyClient:
         terminal bytes.
         """
         url = self.websocket_url(sandbox, session_id)
-        try:
-            websocket = connect(url, additional_headers={self._transport.auth_header: self._transport.auth_value}, **kwargs)
-        except Exception as exc:
-            raise Leap0WebSocketError(str(exc)) from exc
+        websocket = connect(url, additional_headers={self._transport.auth_header: self._transport.auth_value}, **kwargs)
         return PtyConnection(websocket=websocket)

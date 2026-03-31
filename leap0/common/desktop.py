@@ -1,7 +1,17 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Literal, TypedDict, cast
+from typing import Any, Literal, TypedDict, cast
+
+
+def _safe_int(value: Any, default: int = 0) -> int:
+    """Parse *value* as an integer, returning *default* on ``None`` or invalid input."""
+    if value is None:
+        return default
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
 
 
 class DesktopDisplayInfoDict(TypedDict, total=False):
@@ -99,8 +109,8 @@ class DesktopDisplayInfo:
     def from_dict(cls, data: DesktopDisplayInfoDict) -> DesktopDisplayInfo:
         return cls(
             display=data.get("display", ""),
-            width=int(data.get("width", 0)),
-            height=int(data.get("height", 0)),
+            width=_safe_int(data.get("width"), 0),
+            height=_safe_int(data.get("height"), 0),
         )
 
 
@@ -122,12 +132,12 @@ class DesktopWindow:
     def from_dict(cls, data: DesktopWindowDict) -> DesktopWindow:
         return cls(
             id=data.get("id", ""),
-            desktop=int(data.get("desktop", 0)),
-            pid=int(data.get("pid", 0)),
-            x=int(data.get("x", 0)),
-            y=int(data.get("y", 0)),
-            width=int(data.get("width", 0)),
-            height=int(data.get("height", 0)),
+            desktop=_safe_int(data.get("desktop"), 0),
+            pid=_safe_int(data.get("pid"), 0),
+            x=_safe_int(data.get("x"), 0),
+            y=_safe_int(data.get("y"), 0),
+            width=_safe_int(data.get("width"), 0),
+            height=_safe_int(data.get("height"), 0),
             window_class=data.get("class", data.get("class_", "")),
             host=data.get("host", ""),
             title=data.get("title", ""),
@@ -142,7 +152,7 @@ class DesktopPointerPosition:
 
     @classmethod
     def from_dict(cls, data: DesktopPointerPositionDict) -> DesktopPointerPosition:
-        return cls(x=int(data.get("x", 0)), y=int(data.get("y", 0)))
+        return cls(x=_safe_int(data.get("x"), 0), y=_safe_int(data.get("y"), 0))
 
 
 @dataclass(slots=True)
@@ -189,7 +199,7 @@ class DesktopRecordingSummary:
             file_name=data.get("file_name", ""),
             download=data.get("download", ""),
             mime_type=data.get("mime_type", ""),
-            size_bytes=int(data.get("size_bytes", 0)),
+            size_bytes=_safe_int(data.get("size_bytes"), 0),
             created_at=data.get("created_at", ""),
             active=bool(data.get("active", False)),
         )
@@ -217,7 +227,7 @@ class DesktopProcessStatus:
         return cls(
             name=data.get("name", ""),
             running=bool(data.get("running", False)),
-            pid=int(data.get("pid", 0)),
+            pid=_safe_int(data.get("pid"), 0),
             stdout_log=data.get("stdout_log", ""),
             stderr_log=data.get("stderr_log", ""),
         )
@@ -234,9 +244,13 @@ class DesktopProcessStatusList:
     def from_dict(cls, data: DesktopProcessStatusListDict) -> DesktopProcessStatusList:
         return cls(
             status=data.get("status", ""),
-            items=[DesktopProcessStatus.from_dict(cast(DesktopProcessStatusDict, cast(object, item))) for item in data.get("items", [])],
-            running=int(data.get("running", 0)),
-            total=int(data.get("total", 0)),
+            items=[
+                DesktopProcessStatus.from_dict(item)  # type: ignore[arg-type]
+                for item in data.get("items", [])
+                if isinstance(item, dict)
+            ],
+            running=_safe_int(data.get("running"), 0),
+            total=_safe_int(data.get("total"), 0),
         )
 
 
@@ -250,7 +264,7 @@ class DesktopProcessRestart:
         status = data.get("status")
         return cls(
             message=data.get("message", ""),
-            status=DesktopProcessStatus.from_dict(cast(DesktopProcessStatusDict, cast(object, status))) if isinstance(status, dict) else None,
+            status=DesktopProcessStatus.from_dict(status) if isinstance(status, dict) else None,  # type: ignore[arg-type]
         )
 
 

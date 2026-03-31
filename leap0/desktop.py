@@ -4,6 +4,7 @@ from collections.abc import Iterator
 from typing import Any, cast
 
 import httpx
+from tenacity import retry, retry_if_exception_type, stop_after_delay, wait_exponential
 
 from ._transport import Transport
 from ._utils.errors import intercept_errors
@@ -319,7 +320,7 @@ class DesktopClient:
     @intercept_errors("Failed to check desktop health: ")
     def health(self, sandbox: SandboxRef) -> DesktopHealth:
         """Check the health of the desktop environment."""
-        data: DesktopHealthDict = self._request_json("GET", sandbox, "/api/healthz")  # type: ignore[assignment]
+        data: DesktopHealthDict = self._request_json("GET", sandbox, "/api/healthz", expected_status=(200, 503))  # type: ignore[assignment]
         return DesktopHealth.from_dict(data)
 
     @intercept_errors("Failed to get process status: ")
@@ -364,3 +365,44 @@ class DesktopClient:
                 yield DesktopProcessStatusList.from_dict(cast(DesktopProcessStatusListDict, event))
         finally:
             response.close()
+
+    def wait_until_ready(self, sandbox: SandboxRef, *, timeout: float = 60.0) -> None:
+        """Block until all desktop processes are running.
+
+        Connects to the SSE status stream and waits for the aggregate
+        status to become ``"running"`` (all four desktop processes alive).
+        Automatically retries the stream connection on transient errors
+        using exponential back-off, bounded by *timeout* seconds total.
+
+        Args:
+            sandbox: Sandbox ID or object.
+            timeout: Maximum seconds to wait (default 60).
+
+        Raises:
+            Leap0TimeoutError: If the desktop does not become ready within
+                *timeout* seconds.
+        """
+        from .common.errors import Leap0TimeoutError
+
+        @retry(
+            stop=stop_after_delay(timeout),
+            wait=wait_exponential(multiplier=0.5, min=0.5, max=5),
+            retry=retry_if_exception_type((Leap0Error, ConnectionError, OSError)),
+            reraise=True,
+        )
+        def _poll() -> None:
+            for status in self.status_stream(sandbox):
+                if status.status == "running":
+                    return
+            raise Leap0Error("Desktop status stream ended without reaching 'running' state")
+
+        try:
+            _poll()
+        except Leap0Error as exc:
+            raise Leap0TimeoutError(
+                f"Desktop did not become ready within {timeout:.0f}s: {exc}"
+            ) from exc
+        except Exception as exc:
+            raise Leap0TimeoutError(
+                f"Desktop did not become ready within {timeout:.0f}s"
+            ) from exc

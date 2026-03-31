@@ -43,7 +43,7 @@ class Leap0Config:
             self.api_key = os.environ.get("LEAP0_API_KEY")
         if not self.api_key:
             raise ValueError("api_key is required or set LEAP0_API_KEY")
-        if self.base_url is None:
+        if not self.base_url or not self.base_url.strip():
             self.base_url = os.environ.get("LEAP0_BASE_URL") or DEFAULT_BASE_URL
-        if self.sandbox_domain is None:
+        if not self.sandbox_domain or not self.sandbox_domain.strip():
             self.sandbox_domain = os.environ.get("LEAP0_SANDBOX_DOMAIN") or DEFAULT_SANDBOX_DOMAIN
