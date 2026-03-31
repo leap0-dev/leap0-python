@@ -3,9 +3,10 @@ from __future__ import annotations
 from typing import Any
 
 from ._transport import Transport
-from ._types import LspSuccessResponseDict
-from ._utils import file_uri as _file_uri
-from .models import LspResponse, SandboxRef, sandbox_id_of
+from ._utils.errors import intercept_errors
+from ._utils.url import file_uri as _file_uri
+from .common.lsp import LspResponse, LspSuccessResponseDict
+from .common.sandbox import SandboxRef, sandbox_id_of
 
 
 class LspClient:
@@ -19,6 +20,7 @@ class LspClient:
     def __init__(self, transport: Transport):
         self._transport = transport
 
+    @intercept_errors("Failed to start LSP server: ")
     def start(self, sandbox: SandboxRef, *, language_id: str, path_to_project: str) -> LspResponse:
         """Start the LSP server for a language and project.
 
@@ -33,11 +35,13 @@ class LspClient:
         data: LspSuccessResponseDict = self._transport.request_json("POST", f"/v1/sandbox/{sandbox_id_of(sandbox)}/lsp/start", json={"language_id": language_id, "path_to_project": path_to_project})  # type: ignore[assignment]
         return LspResponse.from_dict(data)
 
+    @intercept_errors("Failed to stop LSP server: ")
     def stop(self, sandbox: SandboxRef, *, language_id: str, path_to_project: str) -> LspResponse:
         """Send ``shutdown`` and ``exit`` to the language server and terminate it."""
         data: LspSuccessResponseDict = self._transport.request_json("POST", f"/v1/sandbox/{sandbox_id_of(sandbox)}/lsp/stop", json={"language_id": language_id, "path_to_project": path_to_project})  # type: ignore[assignment]
         return LspResponse.from_dict(data)
 
+    @intercept_errors("Failed to open document: ")
     def did_open(
         self,
         sandbox: SandboxRef,
@@ -75,6 +79,7 @@ class LspClient:
             expected_status=204,
         )
 
+    @intercept_errors("Failed to open document: ")
     def did_open_path(
         self,
         sandbox: SandboxRef,
@@ -88,6 +93,7 @@ class LspClient:
         """Like :meth:`did_open` but accepts a file path instead of a URI."""
         self.did_open(sandbox, language_id=language_id, path_to_project=path_to_project, uri=_file_uri(path), text=text, version=version)
 
+    @intercept_errors("Failed to close document: ")
     def did_close(self, sandbox: SandboxRef, *, language_id: str, path_to_project: str, uri: str) -> None:
         """Notify the language server that a document was closed."""
         self._transport.request(
@@ -97,10 +103,12 @@ class LspClient:
             expected_status=204,
         )
 
+    @intercept_errors("Failed to close document: ")
     def did_close_path(self, sandbox: SandboxRef, *, language_id: str, path_to_project: str, path: str) -> None:
         """Like :meth:`did_close` but accepts a file path instead of a URI."""
         self.did_close(sandbox, language_id=language_id, path_to_project=path_to_project, uri=_file_uri(path))
 
+    @intercept_errors("Failed to get completions: ")
     def completions(
         self,
         sandbox: SandboxRef,
@@ -123,6 +131,7 @@ class LspClient:
             },
         )
 
+    @intercept_errors("Failed to get completions: ")
     def completions_path(
         self,
         sandbox: SandboxRef,
@@ -136,6 +145,7 @@ class LspClient:
         """Like :meth:`completions` but accepts a file path instead of a URI."""
         return self.completions(sandbox, language_id=language_id, path_to_project=path_to_project, uri=_file_uri(path), line=line, character=character)
 
+    @intercept_errors("Failed to get document symbols: ")
     def document_symbols(self, sandbox: SandboxRef, *, language_id: str, path_to_project: str, uri: str) -> dict[str, Any]:
         """Returns the raw JSON-RPC 2.0 response from the language server."""
         return self._transport.request_json(
@@ -144,6 +154,7 @@ class LspClient:
             json={"language_id": language_id, "path_to_project": path_to_project, "uri": uri},
         )
 
+    @intercept_errors("Failed to get document symbols: ")
     def document_symbols_path(self, sandbox: SandboxRef, *, language_id: str, path_to_project: str, path: str) -> dict[str, Any]:
         """Like :meth:`document_symbols` but accepts a file path instead of a URI."""
         return self.document_symbols(sandbox, language_id=language_id, path_to_project=path_to_project, uri=_file_uri(path))

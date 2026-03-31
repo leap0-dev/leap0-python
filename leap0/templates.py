@@ -3,8 +3,8 @@ from __future__ import annotations
 from typing import Any
 
 from ._transport import Transport
-from ._types import RegistryCredentialsDict, UploadTemplateResponseDict
-from .models import Template
+from ._utils.errors import intercept_errors
+from .common.template import RegistryCredentialsDict, Template, UploadTemplateResponseDict
 
 
 class TemplatesClient:
@@ -17,6 +17,7 @@ class TemplatesClient:
     def __init__(self, transport: Transport):
         self._transport = transport
 
+    @intercept_errors("Failed to create template: ")
     def create(self, *, name: str, uri: str, credentials: RegistryCredentialsDict | None = None) -> Template:
         """Upload a new template from a container image URI.
 
@@ -32,16 +33,17 @@ class TemplatesClient:
         data: UploadTemplateResponseDict = self._transport.request_json("POST", "/v1/template", json=payload, expected_status=201)  # type: ignore[assignment]
         return Template.from_dict(data)
 
-    def rename(self, template_id: str, *, name: str) -> Template:
+    @intercept_errors("Failed to rename template: ")
+    def rename(self, template_id: str, *, name: str) -> None:
         """Rename an existing template.
 
         Args:
             template_id: ID of the template to rename.
             name: New template name.
         """
-        data: UploadTemplateResponseDict = self._transport.request_json("PATCH", f"/v1/template/{template_id}", json={"name": name})  # type: ignore[assignment]
-        return Template.from_dict(data)
+        self._transport.request("PATCH", f"/v1/template/{template_id}", json={"name": name}, expected_status=204)
 
+    @intercept_errors("Failed to delete template: ")
     def delete(self, template_id: str) -> None:
         """Delete a template by ID."""
         self._transport.request("DELETE", f"/v1/template/{template_id}", expected_status=204)

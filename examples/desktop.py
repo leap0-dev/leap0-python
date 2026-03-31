@@ -6,8 +6,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from leap0 import Leap0, Leap0APIError, Leap0Client, Leap0Config, Leap0Error
-from leap0.models import SandboxRef
+from leap0 import Leap0, Leap0Client, Leap0Config, Leap0Error
+from leap0.common.sandbox import SandboxRef
 
 
 def wait_for_desktop(client: Leap0Client, sandbox: SandboxRef, *, timeout_seconds: float = 60.0) -> None:
@@ -17,7 +17,7 @@ def wait_for_desktop(client: Leap0Client, sandbox: SandboxRef, *, timeout_second
         if sandbox_status.state == "running":
             try:
                 health = client.desktop.health(sandbox)
-            except Leap0APIError:
+            except Leap0Error:
                 pass
             else:
                 if health.ok and health.state == "ready":

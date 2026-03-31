@@ -3,27 +3,25 @@ from __future__ import annotations
 from typing import Any
 
 from ._transport import Transport
-from ._types import (
+from ._utils.errors import intercept_errors
+from .common.filesystem import (
     EditFileResponseDict,
+    EditFileResult,
     EditFilesResponseDict,
+    EditResult,
     ExistsResponseDict,
+    FileEdit,
+    FileInfo,
     FileInfoDict,
     GlobResponseDict,
     GrepResponseDict,
     LsResponseDict,
-    TreeResponseDict,
-)
-from .models import (
-    EditFileResult,
-    EditResult,
-    FileEdit,
-    FileInfo,
     LsResult,
-    SandboxRef,
     SearchMatch,
+    TreeResponseDict,
     TreeResult,
-    sandbox_id_of,
 )
+from .common.sandbox import SandboxRef, sandbox_id_of
 
 
 class FilesystemClient:
@@ -35,6 +33,7 @@ class FilesystemClient:
     def __init__(self, transport: Transport):
         self._transport = transport
 
+    @intercept_errors("Failed to list directory: ")
     def ls(self, sandbox: SandboxRef, *, path: str, recursive: bool = False, exclude: list[str] | None = None) -> LsResult:
         """List directory entries.
 
@@ -50,11 +49,13 @@ class FilesystemClient:
         data: LsResponseDict = self._transport.request_json("POST", f"/v1/sandbox/{sandbox_id_of(sandbox)}/filesystem/ls", json=payload)  # type: ignore[assignment]
         return LsResult.from_dict(data)
 
+    @intercept_errors("Failed to stat file: ")
     def stat(self, sandbox: SandboxRef, *, path: str) -> FileInfo:
         """Get metadata for a single path."""
         data: FileInfoDict = self._transport.request_json("POST", f"/v1/sandbox/{sandbox_id_of(sandbox)}/filesystem/stat", json={"path": path})  # type: ignore[assignment]
         return FileInfo.from_dict(data)
 
+    @intercept_errors("Failed to create directory: ")
     def mkdir(self, sandbox: SandboxRef, *, path: str, recursive: bool = False, permissions: str | None = None) -> None:
         """Create a directory. Set *recursive* to create parent directories.
 
@@ -74,6 +75,7 @@ class FilesystemClient:
             expected_status=204,
         )
 
+    @intercept_errors("Failed to write file: ")
     def write_file_bytes(self, sandbox: SandboxRef, *, path: str, content: bytes, permissions: str | None = None) -> None:
         """Write raw bytes to a single file path."""
         params: dict[str, str] = {"path": path}
@@ -88,10 +90,12 @@ class FilesystemClient:
             expected_status=204,
         )
 
+    @intercept_errors("Failed to write file: ")
     def write_file_text(self, sandbox: SandboxRef, *, path: str, content: str, encoding: str = "utf-8", permissions: str | None = None) -> None:
         """Write a string to a single file path, encoded as *encoding*."""
         self.write_file_bytes(sandbox, path=path, content=content.encode(encoding), permissions=permissions)
 
+    @intercept_errors("Failed to write files: ")
     def write_files_bytes(self, sandbox: SandboxRef, *, files: dict[str, bytes]) -> None:
         """Write multiple files in a single request.
 
@@ -106,10 +110,12 @@ class FilesystemClient:
             expected_status=204,
         )
 
+    @intercept_errors("Failed to write files: ")
     def write_files_text(self, sandbox: SandboxRef, *, files: dict[str, str], encoding: str = "utf-8") -> None:
         """Write multiple text files in a single request."""
         self.write_files_bytes(sandbox, files={p: c.encode(encoding) for p, c in files.items()})
 
+    @intercept_errors("Failed to read file: ")
     def read_file_bytes(
         self,
         sandbox: SandboxRef,
@@ -142,6 +148,7 @@ class FilesystemClient:
         response = self._transport.request("POST", f"/v1/sandbox/{sandbox_id_of(sandbox)}/filesystem/read-file", json=payload)
         return response.content
 
+    @intercept_errors("Failed to read file: ")
     def read_file_text(
         self,
         sandbox: SandboxRef,
@@ -163,15 +170,18 @@ class FilesystemClient:
             tail=tail,
         ).decode(encoding)
 
+    @intercept_errors("Failed to read files: ")
     def read_files_bytes(self, sandbox: SandboxRef, *, paths: list[str]) -> dict[str, bytes]:
         """Read multiple files. Returns a mapping of file path to raw bytes."""
         response = self._transport.request("POST", f"/v1/sandbox/{sandbox_id_of(sandbox)}/filesystem/read-files", json={"paths": paths})
         return _parse_multipart_response(response.headers.get("content-type", ""), response.content)
 
+    @intercept_errors("Failed to read files: ")
     def read_files_text(self, sandbox: SandboxRef, *, paths: list[str], encoding: str = "utf-8") -> dict[str, str]:
         """Read multiple files. Returns a mapping of file path to decoded string."""
         return {path: content.decode(encoding) for path, content in self.read_files_bytes(sandbox, paths=paths).items()}
 
+    @intercept_errors("Failed to delete: ")
     def delete(self, sandbox: SandboxRef, *, path: str, recursive: bool = False) -> None:
         """Delete a file or directory. Set *recursive* for directories with contents."""
         self._transport.request(
@@ -181,6 +191,7 @@ class FilesystemClient:
             expected_status=204,
         )
 
+    @intercept_errors("Failed to set permissions: ")
     def set_permissions(
         self,
         sandbox: SandboxRef,
@@ -200,6 +211,7 @@ class FilesystemClient:
             payload["group"] = group
         self._transport.request("POST", f"/v1/sandbox/{sandbox_id_of(sandbox)}/filesystem/set-permissions", json=payload, expected_status=204)
 
+    @intercept_errors("Failed to glob: ")
     def glob(self, sandbox: SandboxRef, *, path: str, pattern: str, exclude: list[str] | None = None) -> list[str]:
         """Find file paths matching a glob pattern."""
         payload: dict[str, Any] = {"path": path, "pattern": pattern}
@@ -208,6 +220,7 @@ class FilesystemClient:
         data: GlobResponseDict = self._transport.request_json("POST", f"/v1/sandbox/{sandbox_id_of(sandbox)}/filesystem/glob", json=payload)  # type: ignore[assignment]
         return list(data.get("items", []))
 
+    @intercept_errors("Failed to grep: ")
     def grep(self, sandbox: SandboxRef, *, path: str, pattern: str, include: str | None = None, exclude: list[str] | None = None) -> list[SearchMatch]:
         """Search for a text pattern across files in a directory.
 
@@ -226,6 +239,7 @@ class FilesystemClient:
         data: GrepResponseDict = self._transport.request_json("POST", f"/v1/sandbox/{sandbox_id_of(sandbox)}/filesystem/grep", json=payload)  # type: ignore[assignment]
         return [SearchMatch.from_dict(item) for item in data.get("items", [])]
 
+    @intercept_errors("Failed to edit file: ")
     def edit_file(self, sandbox: SandboxRef, *, path: str, edits: list[FileEdit]) -> EditFileResult:
         """Apply one or more find-and-replace edits to a single file.
 
@@ -238,6 +252,7 @@ class FilesystemClient:
         )
         return EditFileResult.from_dict(data)
 
+    @intercept_errors("Failed to edit files: ")
     def edit_files(self, sandbox: SandboxRef, *, paths: list[str], find: str, replace: str = "") -> list[EditResult]:
         """Replace text across multiple files at once."""
         data: EditFilesResponseDict = self._transport.request_json(  # type: ignore[assignment]
@@ -247,6 +262,7 @@ class FilesystemClient:
         )
         return [EditResult.from_dict(item) for item in data.get("items", [])]
 
+    @intercept_errors("Failed to move: ")
     def move(self, sandbox: SandboxRef, *, src_path: str, dst_path: str, overwrite: bool = False) -> None:
         """Move or rename a file or directory."""
         self._transport.request(
@@ -256,6 +272,7 @@ class FilesystemClient:
             expected_status=204,
         )
 
+    @intercept_errors("Failed to copy: ")
     def copy(
         self,
         sandbox: SandboxRef,
@@ -271,11 +288,13 @@ class FilesystemClient:
             payload["overwrite"] = overwrite
         self._transport.request("POST", f"/v1/sandbox/{sandbox_id_of(sandbox)}/filesystem/copy", json=payload, expected_status=204)
 
+    @intercept_errors("Failed to check path: ")
     def exists(self, sandbox: SandboxRef, *, path: str) -> bool:
         """Check whether a path exists in the sandbox."""
         data: ExistsResponseDict = self._transport.request_json("POST", f"/v1/sandbox/{sandbox_id_of(sandbox)}/filesystem/exists", json={"path": path})  # type: ignore[assignment]
         return bool(data.get("exists", False))
 
+    @intercept_errors("Failed to get directory tree: ")
     def tree(self, sandbox: SandboxRef, *, path: str, max_depth: int | None = None, exclude: list[str] | None = None) -> TreeResult:
         """Get a recursive directory tree.
 

@@ -7,15 +7,16 @@ from typing import Self
 from ._transport import Transport
 from .code_interpreter import CodeInterpreterClient
 from .desktop import DesktopClient
-from .config import DEFAULT_CLIENT_TIMEOUT, Leap0Config
-from .constants import (
+from .common.config import (
     DEFAULT_BASE_URL,
+    DEFAULT_CLIENT_TIMEOUT,
     DEFAULT_DESKTOP_TEMPLATE_NAME,
     DEFAULT_MEMORY_MIB,
     DEFAULT_SANDBOX_DOMAIN,
     DEFAULT_TEMPLATE_NAME,
     DEFAULT_TIMEOUT_MIN,
     DEFAULT_VCPU,
+    Leap0Config,
 )
 from .filesystem import FilesystemClient
 from .git import GitClient

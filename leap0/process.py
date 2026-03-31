@@ -3,8 +3,9 @@ from __future__ import annotations
 from typing import Any
 
 from ._transport import Transport
-from ._types import ProcessResultDict
-from .models import ProcessResult, SandboxRef, sandbox_id_of
+from ._utils.errors import intercept_errors
+from .common.process import ProcessResult, ProcessResultDict
+from .common.sandbox import SandboxRef, sandbox_id_of
 
 
 class ProcessClient:
@@ -13,6 +14,7 @@ class ProcessClient:
     def __init__(self, transport: Transport):
         self._transport = transport
 
+    @intercept_errors("Failed to execute command: ")
     def execute(self, sandbox: SandboxRef, *, command: str, cwd: str | None = None, timeout: int | None = None) -> ProcessResult:
         """Run a shell command and wait for the result.
 

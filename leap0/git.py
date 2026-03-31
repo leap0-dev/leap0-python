@@ -3,8 +3,9 @@ from __future__ import annotations
 from typing import Any
 
 from ._transport import Transport
-from ._types import GitCommitResponseDict, GitResultDict
-from .models import GitCommitResult, GitResult, SandboxRef, sandbox_id_of
+from ._utils.errors import intercept_errors
+from .common.git import GitCommitResponseDict, GitCommitResult, GitResult, GitResultDict
+from .common.sandbox import SandboxRef, sandbox_id_of
 
 
 class GitClient:
@@ -19,6 +20,7 @@ class GitClient:
         data: GitResultDict = self._transport.request_json("POST", path, json=payload)  # type: ignore[assignment]
         return GitResult.from_dict(data)
 
+    @intercept_errors("Failed to clone repository: ")
     def clone(
         self,
         sandbox: SandboxRef,
@@ -56,10 +58,12 @@ class GitClient:
             payload["password"] = password
         return self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/clone", payload)
 
+    @intercept_errors("Failed to get git status: ")
     def status(self, sandbox: SandboxRef, *, path: str) -> GitResult:
         """Get the current repository status (porcelain v2 format)."""
         return self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/status", {"path": path})
 
+    @intercept_errors("Failed to list branches: ")
     def branches(
         self,
         sandbox: SandboxRef,
@@ -85,6 +89,7 @@ class GitClient:
             payload["not_contains"] = not_contains
         return self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/branches", payload)
 
+    @intercept_errors("Failed to get unstaged diff: ")
     def diff_unstaged(self, sandbox: SandboxRef, *, path: str, context_lines: int | None = None) -> GitResult:
         """Show working tree changes that are not staged yet."""
         payload: dict[str, Any] = {"path": path}
@@ -92,6 +97,7 @@ class GitClient:
             payload["context_lines"] = context_lines
         return self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/diff-unstaged", payload)
 
+    @intercept_errors("Failed to get staged diff: ")
     def diff_staged(self, sandbox: SandboxRef, *, path: str, context_lines: int | None = None) -> GitResult:
         """Show changes that are already staged for the next commit."""
         payload: dict[str, Any] = {"path": path}
@@ -99,6 +105,7 @@ class GitClient:
             payload["context_lines"] = context_lines
         return self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/diff-staged", payload)
 
+    @intercept_errors("Failed to get diff: ")
     def diff(self, sandbox: SandboxRef, *, path: str, target: str, context_lines: int | None = None) -> GitResult:
         """Compare the current state against a branch, tag, or commit."""
         payload: dict[str, Any] = {"path": path, "target": target}
@@ -106,10 +113,12 @@ class GitClient:
             payload["context_lines"] = context_lines
         return self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/diff", payload)
 
+    @intercept_errors("Failed to reset: ")
     def reset(self, sandbox: SandboxRef, *, path: str) -> GitResult:
         """Unstage all currently staged changes."""
         return self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/reset", {"path": path})
 
+    @intercept_errors("Failed to get git log: ")
     def log(
         self,
         sandbox: SandboxRef,
@@ -137,10 +146,12 @@ class GitClient:
             payload["end_timestamp"] = end_timestamp
         return self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/log", payload)
 
+    @intercept_errors("Failed to show revision: ")
     def show(self, sandbox: SandboxRef, *, path: str, revision: str = "HEAD") -> GitResult:
         """Show the full output for a commit, branch, or tag revision."""
         return self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/show", {"path": path, "revision": revision})
 
+    @intercept_errors("Failed to create branch: ")
     def create_branch(
         self,
         sandbox: SandboxRef,
@@ -166,6 +177,7 @@ class GitClient:
             payload["base_branch"] = base_branch
         return self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/create-branch", payload)
 
+    @intercept_errors("Failed to checkout branch: ")
     def checkout_branch(self, sandbox: SandboxRef, *, path: str, branch: str, create: bool | None = None) -> GitResult:
         """Switch to an existing branch. Set *create* to create it if it does not exist."""
         payload: dict[str, Any] = {"path": path, "branch": branch}
@@ -173,14 +185,17 @@ class GitClient:
             payload["create"] = create
         return self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/checkout-branch", payload)
 
+    @intercept_errors("Failed to delete branch: ")
     def delete_branch(self, sandbox: SandboxRef, *, path: str, name: str, force: bool = False) -> GitResult:
         """Delete a branch. Set *force* to delete even if unmerged."""
         return self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/delete-branch", {"path": path, "name": name, "force": force})
 
+    @intercept_errors("Failed to stage files: ")
     def add(self, sandbox: SandboxRef, *, path: str, files: list[str]) -> GitResult:
         """Stage files for the next commit."""
         return self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/add", {"path": path, "files": files})
 
+    @intercept_errors("Failed to commit: ")
     def commit(
         self,
         sandbox: SandboxRef,
@@ -215,6 +230,7 @@ class GitClient:
         )
         return GitCommitResult.from_dict(data)
 
+    @intercept_errors("Failed to push: ")
     def push(
         self,
         sandbox: SandboxRef,
@@ -250,6 +266,7 @@ class GitClient:
             payload["password"] = password
         return self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/push", payload)
 
+    @intercept_errors("Failed to pull: ")
     def pull(
         self,
         sandbox: SandboxRef,
@@ -258,6 +275,7 @@ class GitClient:
         remote: str | None = None,
         branch: str | None = None,
         rebase: bool | None = None,
+        set_upstream: bool | None = None,
         username: str | None = None,
         password: str | None = None,
     ) -> GitResult:
@@ -269,6 +287,7 @@ class GitClient:
             remote: Remote name (default ``"origin"``).
             branch: Branch name.
             rebase: Rebase instead of merge.
+            set_upstream: Set upstream tracking.
             username: Auth username.
             password: Auth password or token.
         """
@@ -279,6 +298,8 @@ class GitClient:
             payload["branch"] = branch
         if rebase is not None:
             payload["rebase"] = rebase
+        if set_upstream is not None:
+            payload["set_upstream"] = set_upstream
         if username is not None:
             payload["username"] = username
         if password is not None:
