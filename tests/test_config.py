@@ -39,6 +39,26 @@ class TestLeap0Config:
         assert cfg.auth_header == "authorization"
         assert cfg.bearer is True
 
+    def test_base_url_from_env(self):
+        with patch.dict(os.environ, {"LEAP0_API_KEY": "key", "LEAP0_BASE_URL": "https://api.custom.dev"}):
+            cfg = Leap0Config()
+            assert cfg.base_url == "https://api.custom.dev"
+
+    def test_sandbox_domain_from_env(self):
+        with patch.dict(os.environ, {"LEAP0_API_KEY": "key", "LEAP0_SANDBOX_DOMAIN": "sandbox.custom.dev"}):
+            cfg = Leap0Config()
+            assert cfg.sandbox_domain == "sandbox.custom.dev"
+
+    def test_explicit_base_url_overrides_env(self):
+        with patch.dict(os.environ, {"LEAP0_BASE_URL": "https://api.env.dev"}):
+            cfg = Leap0Config(api_key="key", base_url="https://api.explicit.dev")
+            assert cfg.base_url == "https://api.explicit.dev"
+
+    def test_explicit_sandbox_domain_overrides_env(self):
+        with patch.dict(os.environ, {"LEAP0_SANDBOX_DOMAIN": "sandbox.env.dev"}):
+            cfg = Leap0Config(api_key="key", sandbox_domain="sandbox.explicit.dev")
+            assert cfg.sandbox_domain == "sandbox.explicit.dev"
+
 
 class TestLeap0Client:
     def test_raises_when_no_key(self):
@@ -69,4 +89,30 @@ class TestLeap0Client:
     def test_api_key_from_env(self):
         with patch.dict(os.environ, {"LEAP0_API_KEY": "env-key"}):
             client = Leap0Client()
+            client.close()
+
+    def test_base_url_from_env(self):
+        with patch.dict(os.environ, {"LEAP0_BASE_URL": "https://api.custom.dev"}):
+            client = Leap0Client(api_key="test-key")
+            assert client._transport.base_url == "https://api.custom.dev"
+            client.close()
+
+    def test_sandbox_domain_from_env(self):
+        with patch.dict(os.environ, {"LEAP0_SANDBOX_DOMAIN": "sandbox.custom.dev"}):
+            client = Leap0Client(api_key="test-key")
+            assert client.sandboxes._sandbox_domain == "sandbox.custom.dev"
+            assert client.desktop._sandbox_domain == "sandbox.custom.dev"
+            assert client.code_interpreter._sandbox_domain == "sandbox.custom.dev"
+            client.close()
+
+    def test_explicit_base_url_overrides_env(self):
+        with patch.dict(os.environ, {"LEAP0_BASE_URL": "https://api.env.dev"}):
+            client = Leap0Client(api_key="test-key", base_url="https://api.explicit.dev")
+            assert client._transport.base_url == "https://api.explicit.dev"
+            client.close()
+
+    def test_explicit_sandbox_domain_overrides_env(self):
+        with patch.dict(os.environ, {"LEAP0_SANDBOX_DOMAIN": "sandbox.env.dev"}):
+            client = Leap0Client(api_key="test-key", sandbox_domain="sandbox.explicit.dev")
+            assert client.sandboxes._sandbox_domain == "sandbox.explicit.dev"
             client.close()

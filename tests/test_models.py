@@ -430,12 +430,14 @@ class TestImageConfig:
             "entrypoint": ["/bin/sh"],
             "cmd": ["-c", "echo hi"],
             "working_dir": "/workspace",
+            "user": "appuser",
             "env": {"PATH": "/usr/bin"},
         }
         c = ImageConfig.from_dict(data)  # type: ignore[arg-type]
         assert c.entrypoint == ["/bin/sh"]
         assert c.cmd == ["-c", "echo hi"]
         assert c.working_dir == "/workspace"
+        assert c.user == "appuser"
         assert c.env == {"PATH": "/usr/bin"}
 
     def test_null_lists(self):
@@ -443,6 +445,7 @@ class TestImageConfig:
         c = ImageConfig.from_dict(data)  # type: ignore[arg-type]
         assert c.entrypoint == []
         assert c.cmd == []
+        assert c.user == ""
 
 
 # Template
