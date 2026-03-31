@@ -6,9 +6,13 @@ from typing import Any, cast
 import httpx
 
 from ._transport import Transport
-from ._types import CodeContextDict, CodeExecutionResultDict, StreamEventDict
-from . import _utils
-from .models import CodeContext, CodeExecutionResult, SandboxRef, StreamEvent, sandbox_id_of
+from ._utils.errors import intercept_errors
+from ._utils.stream import iter_sse_events
+from ._utils.url import sandbox_base_url
+from .common.code_interpreter import (
+    CodeContext, CodeContextDict, CodeExecutionResult, CodeExecutionResultDict, StreamEvent, StreamEventDict,
+)
+from .common.sandbox import SandboxRef, sandbox_id_of
 
 
 class CodeInterpreterClient:
@@ -33,7 +37,7 @@ class CodeInterpreterClient:
     ) -> httpx.Response:
         return self._transport.request_target(
             method,
-            f"{_utils.sandbox_base_url(sandbox_id_of(sandbox), self._sandbox_domain)}{path}",
+            f"{sandbox_base_url(sandbox_id_of(sandbox), self._sandbox_domain)}{path}",
             json=json,
             expected_status=expected_status,
         )
@@ -49,16 +53,18 @@ class CodeInterpreterClient:
     ) -> dict[str, Any]:
         return self._transport.request_target_json(
             method,
-            f"{_utils.sandbox_base_url(sandbox_id_of(sandbox), self._sandbox_domain)}{path}",
+            f"{sandbox_base_url(sandbox_id_of(sandbox), self._sandbox_domain)}{path}",
             json=json,
             expected_status=expected_status,
         )
 
+    @intercept_errors("Failed to check interpreter health: ")
     def health(self, sandbox: SandboxRef) -> bool:
         """Check if the code interpreter is healthy. Returns True if status is ok."""
         data = self._request_json("GET", sandbox, "/healthz")
         return data.get("status") == "ok"
 
+    @intercept_errors("Failed to create execution context: ")
     def create_context(self, sandbox: SandboxRef, *, language: str = "python", cwd: str | None = None) -> CodeContext:
         """Create a new execution context.
 
@@ -73,6 +79,7 @@ class CodeInterpreterClient:
         data: CodeContextDict = self._request_json("POST", sandbox, "/contexts", json=payload, expected_status=201)  # type: ignore[assignment]
         return CodeContext.from_dict(data)
 
+    @intercept_errors("Failed to list execution contexts: ")
     def list_contexts(self, sandbox: SandboxRef) -> list[CodeContext]:
         """List all execution contexts in the sandbox."""
         raw = self._request_json("GET", sandbox, "/contexts")
@@ -80,15 +87,18 @@ class CodeInterpreterClient:
         items: list[CodeContextDict] = raw.get("items", [])  # type: ignore[assignment]
         return [CodeContext.from_dict(item) for item in items]
 
+    @intercept_errors("Failed to get execution context: ")
     def get_context(self, sandbox: SandboxRef, context_id: str) -> CodeContext:
         """Get a single execution context by ID."""
         data: CodeContextDict = self._request_json("GET", sandbox, f"/contexts/{context_id}")  # type: ignore[assignment]
         return CodeContext.from_dict(data)
 
+    @intercept_errors("Failed to delete execution context: ")
     def delete_context(self, sandbox: SandboxRef, context_id: str) -> None:
         """Delete an execution context."""
         self._request("DELETE", sandbox, f"/contexts/{context_id}", expected_status=204)
 
+    @intercept_errors("Failed to execute code: ")
     def execute(
         self,
         sandbox: SandboxRef,
@@ -119,8 +129,9 @@ class CodeInterpreterClient:
             payload["timeout_ms"] = timeout_ms
         response = self._request("POST", sandbox, "/execute", json=payload)
         data: CodeExecutionResultDict = response.json()  # type: ignore[assignment]
-        return CodeExecutionResult.from_dict(data, context_id=response.headers.get("X-Context-Id"))
+        return CodeExecutionResult.from_dict(data)
 
+    @intercept_errors("Failed to execute code: ")
     def execute_stream(
         self,
         sandbox: SandboxRef,
@@ -149,11 +160,11 @@ class CodeInterpreterClient:
             payload["timeout_ms"] = timeout_ms
         response = self._transport.stream(
             "POST",
-            f"{_utils.sandbox_base_url(sandbox_id_of(sandbox), self._sandbox_domain)}/execute/async",
+            f"{sandbox_base_url(sandbox_id_of(sandbox), self._sandbox_domain)}/execute/async",
             json=payload,
         )
         try:
-            for event in _utils.iter_sse_events(response.iter_lines()):
+            for event in iter_sse_events(response.iter_lines()):
                 yield StreamEvent.from_dict(cast(StreamEventDict, event))
         finally:
             response.close()

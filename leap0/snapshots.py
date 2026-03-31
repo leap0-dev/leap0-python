@@ -3,8 +3,9 @@ from __future__ import annotations
 from typing import Any
 
 from ._transport import Transport
-from ._types import NetworkPolicyDict, SandboxCreateResponseDict, SnapshotCreateResponseDict
-from .models import Sandbox, SandboxRef, Snapshot, SnapshotRef, sandbox_id_of, snapshot_id_of
+from ._utils.errors import intercept_errors
+from .common.sandbox import NetworkPolicyDict, Sandbox, SandboxCreateResponseDict, SandboxRef, sandbox_id_of
+from .common.snapshot import Snapshot, SnapshotCreateResponseDict, SnapshotRef, snapshot_id_of
 
 
 class SnapshotsClient:
@@ -17,6 +18,7 @@ class SnapshotsClient:
     def __init__(self, transport: Transport):
         self._transport = transport
 
+    @intercept_errors("Failed to create snapshot: ")
     def create(
         self,
         sandbox: SandboxRef,
@@ -40,6 +42,7 @@ class SnapshotsClient:
         )
         return Snapshot.from_dict(data)
 
+    @intercept_errors("Failed to pause sandbox: ")
     def pause(
         self,
         sandbox: SandboxRef,
@@ -65,6 +68,7 @@ class SnapshotsClient:
         )
         return Snapshot.from_dict(data)
 
+    @intercept_errors("Failed to resume snapshot: ")
     def resume(
         self,
         *,
@@ -97,6 +101,7 @@ class SnapshotsClient:
         )
         return Sandbox.from_dict(data)
 
+    @intercept_errors("Failed to delete snapshot: ")
     def delete(self, snapshot: SnapshotRef) -> None:
         """Delete a snapshot."""
         self._transport.request("DELETE", f"/v1/snapshot/{snapshot_id_of(snapshot)}", expected_status=204)

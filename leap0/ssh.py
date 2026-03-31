@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from ._transport import Transport
-from .models import SandboxRef, SshAccess, SshValidation, sandbox_id_of
+from ._utils.errors import intercept_errors
+from .common.sandbox import SandboxRef, sandbox_id_of
+from .common.ssh import SshAccess, SshValidation
 
 
 class SshClient:
@@ -15,6 +17,7 @@ class SshClient:
     def __init__(self, transport: Transport):
         self._transport = transport
 
+    @intercept_errors("Failed to create SSH access: ")
     def create_access(self, sandbox: SandboxRef) -> SshAccess:
         """Generate SSH credentials for a sandbox.
 
@@ -24,10 +27,12 @@ class SshClient:
         data = self._transport.request_json("POST", f"/v1/sandbox/{sandbox_id_of(sandbox)}/ssh/access", expected_status=201)
         return SshAccess.from_dict(data)  # type: ignore[arg-type]
 
+    @intercept_errors("Failed to delete SSH access: ")
     def delete_access(self, sandbox: SandboxRef) -> None:
         """Revoke SSH access for a sandbox. The credential is invalidated immediately."""
         self._transport.request("DELETE", f"/v1/sandbox/{sandbox_id_of(sandbox)}/ssh/access", expected_status=204)
 
+    @intercept_errors("Failed to validate SSH access: ")
     def validate_access(self, sandbox: SandboxRef, *, access_id: str, password: str) -> SshValidation:
         """Check whether an SSH access credential is still valid and not expired."""
         data = self._transport.request_json(
@@ -37,6 +42,7 @@ class SshClient:
         )
         return SshValidation.from_dict(data)  # type: ignore[arg-type]
 
+    @intercept_errors("Failed to regenerate SSH access: ")
     def regenerate_access(self, sandbox: SandboxRef) -> SshAccess:
         """Invalidate the current credential and generate a new one. The expiry is also reset."""
         data = self._transport.request_json("POST", f"/v1/sandbox/{sandbox_id_of(sandbox)}/ssh/regen")

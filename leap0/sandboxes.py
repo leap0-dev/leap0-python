@@ -4,10 +4,13 @@ import os
 from typing import Any
 
 from ._transport import Transport
-from ._types import NetworkPolicyDict, SandboxCreateResponseDict, SandboxStatusResponseDict
-from ._utils import ensure_leading_slash, sandbox_base_url, websocket_url_from_http
-from .constants import DEFAULT_MEMORY_MIB, DEFAULT_TEMPLATE_NAME, DEFAULT_TIMEOUT_MIN, DEFAULT_VCPU
-from .models import Sandbox, SandboxRef, SandboxStatus, sandbox_id_of
+from ._utils.errors import intercept_errors
+from ._utils.url import ensure_leading_slash, sandbox_base_url, websocket_url_from_http
+from .common.config import DEFAULT_MEMORY_MIB, DEFAULT_TEMPLATE_NAME, DEFAULT_TIMEOUT_MIN, DEFAULT_VCPU
+from .common.sandbox import (
+    NetworkPolicyDict, Sandbox, SandboxCreateResponseDict, SandboxRef,
+    SandboxStatus, SandboxStatusResponseDict, sandbox_id_of,
+)
 
 
 _OTEL_ENV_KEYS = (
@@ -35,6 +38,7 @@ class SandboxesClient:
         self._transport = transport
         self._sandbox_domain = sandbox_domain.strip("/") if sandbox_domain else None
 
+    @intercept_errors("Failed to create sandbox: ")
     def create(
         self,
         *,
@@ -79,6 +83,7 @@ class SandboxesClient:
         )
         return Sandbox.from_dict(data)
 
+    @intercept_errors("Failed to pause sandbox: ")
     def pause(self, sandbox: SandboxRef) -> Sandbox:
         """Pause a running sandbox. The sandbox must be in the ``running`` state."""
         data: SandboxCreateResponseDict = self._transport.request_json(  # type: ignore[assignment]
@@ -86,6 +91,7 @@ class SandboxesClient:
         )
         return Sandbox.from_dict(data)
 
+    @intercept_errors("Failed to get sandbox: ")
     def get(self, sandbox: SandboxRef) -> SandboxStatus:
         """Get the current status of a sandbox."""
         data: SandboxStatusResponseDict = self._transport.request_json(  # type: ignore[assignment]
@@ -93,6 +99,7 @@ class SandboxesClient:
         )
         return SandboxStatus.from_dict(data)
 
+    @intercept_errors("Failed to delete sandbox: ")
     def delete(self, sandbox: SandboxRef) -> None:
         """Terminate and delete a sandbox."""
         self._transport.request("DELETE", f"/v1/sandbox/{sandbox_id_of(sandbox)}/", expected_status=204)

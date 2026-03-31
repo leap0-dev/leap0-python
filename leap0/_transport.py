@@ -4,8 +4,8 @@ from typing import Any
 
 import httpx
 
-from .config import DEFAULT_CLIENT_TIMEOUT
-from .exceptions import Leap0APIError
+from .common.config import DEFAULT_CLIENT_TIMEOUT
+from .common.errors import raise_api_error
 
 
 class Transport:
@@ -51,7 +51,12 @@ class Transport:
     def _check_response(self, response: httpx.Response, method: str, target: str, expected_status: int | tuple[int, ...]) -> httpx.Response:
         expected = self._expected(expected_status)
         if response.status_code not in expected:
-            raise Leap0APIError(response.status_code, f"Request failed: {method} {target}", body=response.text)
+            raise_api_error(
+                response.status_code,
+                f"Request failed: {method} {target}",
+                body=response.text,
+                headers=dict(response.headers),
+            )
         return response
 
     def _request(
@@ -100,8 +105,9 @@ class Transport:
         response = self._client.send(request, stream=True)
         if response.status_code >= 400:
             body = response.read().decode("utf-8", errors="replace")
+            hdrs = dict(response.headers)
             response.close()
-            raise Leap0APIError(response.status_code, f"Request failed: {method} {target}", body=body)
+            raise_api_error(response.status_code, f"Request failed: {method} {target}", body=body, headers=hdrs)
         return response
 
     def request(
