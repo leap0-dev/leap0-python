@@ -30,7 +30,7 @@ def _parse_sse_data(data: str) -> dict[str, Any] | str:
 def iter_sse_events(lines: Iterable[str]) -> Iterator[dict[str, Any] | str]:
     buffer: list[str] = []
     for line in lines:
-        stripped = line.rstrip("\r")
+        stripped = line.rstrip("\r\n")
         if stripped == "":
             if buffer:
                 data_lines = [_sse_data_value(item) for item in buffer if item.startswith("data:")]

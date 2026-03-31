@@ -94,12 +94,17 @@ class Template:
 
     @classmethod
     def from_dict(cls, data: UploadTemplateResponseDict) -> Template:
+        raw_id = data.get("id")  # type: ignore[arg-type]
+        raw_name = data.get("name")  # type: ignore[arg-type]
+        raw_digest = data.get("digest")  # type: ignore[arg-type]
+        raw_created = data.get("created_at")  # type: ignore[arg-type]
         ic = data.get("image_config")
+        raw_system = data.get("is_system")  # type: ignore[arg-type]
         return cls(
-            id=data.get("id", ""),  # type: ignore[arg-type]
-            name=data.get("name", ""),  # type: ignore[arg-type]
-            digest=data.get("digest", ""),  # type: ignore[arg-type]
+            id=raw_id if isinstance(raw_id, str) else "",
+            name=raw_name if isinstance(raw_name, str) else "",
+            digest=raw_digest if isinstance(raw_digest, str) else "",
             image_config=ImageConfig.from_dict(ic) if isinstance(ic, dict) else None,
-            is_system=bool(data.get("is_system", False)),  # type: ignore[arg-type]
-            created_at=data.get("created_at", ""),  # type: ignore[arg-type]
+            is_system=raw_system if isinstance(raw_system, bool) else False,
+            created_at=raw_created if isinstance(raw_created, str) else "",
         )

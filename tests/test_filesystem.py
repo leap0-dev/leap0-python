@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from unittest.mock import MagicMock
+
 import pytest
 
 from leap0.filesystem import FilesystemClient, _parse_multipart_response
@@ -13,7 +15,6 @@ class TestFilesystemClient:
         assert "/filesystem/ls" in mock_transport.request_json.call_args[0][1]
 
     def test_mkdir(self, mock_transport):
-        from unittest.mock import MagicMock
         mock_transport.request.return_value = MagicMock(status_code=204)
         FilesystemClient(mock_transport).mkdir("sbx-1", path="/workspace/src", recursive=True)
         assert mock_transport.request.call_args[1]["json"]["recursive"] is True

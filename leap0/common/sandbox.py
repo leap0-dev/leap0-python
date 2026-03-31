@@ -73,9 +73,12 @@ class Sandbox:
 
     @classmethod
     def from_dict(cls, data: SandboxCreateResponseDict) -> Sandbox:
+        sandbox_id = data.get("id")
+        if not sandbox_id or not isinstance(sandbox_id, str):
+            raise ValueError(f"Sandbox response missing required non-empty string 'id', got: {sandbox_id!r}")
         state = _parse_sandbox_state(data.get("state"))
         return cls(
-            id=data["id"],
+            id=sandbox_id,
             template_id=data.get("template_id", ""),
             vcpu=int(data.get("vcpu", 0)),
             memory_mib=int(data.get("memory_mib", 0)),

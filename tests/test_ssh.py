@@ -16,4 +16,4 @@ class TestSshClient:
     def test_delete_access(self, mock_transport):
         mock_transport.request.return_value = MagicMock(status_code=204)
         SshClient(mock_transport).delete_access("sbx-1")
-        assert "/ssh/access" in mock_transport.request.call_args[0][1]
+        assert mock_transport.request.call_args[0][:2] == ("DELETE", "/v1/sandbox/sbx-1/ssh/access")

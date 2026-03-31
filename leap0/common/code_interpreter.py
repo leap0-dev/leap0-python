@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 import base64
+import binascii
+import logging
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, TypedDict
+
+_logger = logging.getLogger(__name__)
 
 
 class CodeLanguage(str, Enum):
@@ -119,13 +123,31 @@ class CodeExecutionOutput:
         return self.is_primary
 
     def png_bytes(self) -> bytes | None:
-        return base64.b64decode(self.png) if self.png else None
+        if not self.png:
+            return None
+        try:
+            return base64.b64decode(self.png)
+        except (binascii.Error, ValueError):
+            _logger.debug("Failed to decode png base64 data")
+            return None
 
     def jpeg_bytes(self) -> bytes | None:
-        return base64.b64decode(self.jpeg) if self.jpeg else None
+        if not self.jpeg:
+            return None
+        try:
+            return base64.b64decode(self.jpeg)
+        except (binascii.Error, ValueError):
+            _logger.debug("Failed to decode jpeg base64 data")
+            return None
 
     def pdf_bytes(self) -> bytes | None:
-        return base64.b64decode(self.pdf) if self.pdf else None
+        if not self.pdf:
+            return None
+        try:
+            return base64.b64decode(self.pdf)
+        except (binascii.Error, ValueError):
+            _logger.debug("Failed to decode pdf base64 data")
+            return None
 
 
 @dataclass(slots=True)

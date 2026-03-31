@@ -180,6 +180,8 @@ __all__ = [
     "FileInfoDict",
     "GitCommitResponseDict",
     "GitResultDict",
+    "GlobResponseDict",
+    "GrepResponseDict",
     "ImageConfigDict",
     "LsResponseDict",
     "LspJsonRpcErrorDict",

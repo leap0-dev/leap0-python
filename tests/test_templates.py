@@ -12,7 +12,7 @@ class TestTemplatesClient:
             "image_config": None, "is_system": False, "created_at": "",
         }
         result = TemplatesClient(mock_transport).create(name="my-tpl", uri="docker.io/library/python:3.12")
-        args, kwargs = mock_transport.request_json.call_args
+        args, _kwargs = mock_transport.request_json.call_args
         assert args[1] == "/v1/template"
         assert result.name == "my-tpl"
 
