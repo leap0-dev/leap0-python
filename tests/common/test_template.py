@@ -12,8 +12,8 @@ class TestImageConfig:
 
     def test_null_lists(self):
         c = ImageConfig.from_dict({"entrypoint": None, "cmd": None})
-        assert c.entrypoint == []
-        assert c.cmd == []
+        assert c.entrypoint is None
+        assert c.cmd is None
 
 
 class TestTemplate:

@@ -1,23 +1,50 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any, Literal, TypedDict
+from dataclasses import dataclass
+from enum import Enum
+from typing import TypedDict
+
+from typing_extensions import Literal, NotRequired, Required, TypeAlias
 
 
-RegistryCredentialType = Literal["basic", "aws", "gcp", "azure"]
+class RegistryCredentialType(str, Enum):
+    BASIC = "basic"
+    AWS = "aws"
+    GCP = "gcp"
+    AZURE = "azure"
 
 
-class RegistryCredentialsDict(TypedDict, total=False):
-    type: RegistryCredentialType
-    username: str
-    password: str
-    aws_access_key_id: str
-    aws_secret_access_key: str
-    aws_region: str
-    gcp_service_account_json: str
-    azure_client_id: str
-    azure_client_secret: str
-    azure_tenant_id: str
+class BasicRegistryCredentialsDict(TypedDict, total=False):
+    type: Required[Literal[RegistryCredentialType.BASIC, "basic"]]
+    username: Required[str]
+    password: Required[str]
+
+
+class AwsRegistryCredentialsDict(TypedDict, total=False):
+    type: Required[Literal[RegistryCredentialType.AWS, "aws"]]
+    aws_access_key_id: Required[str]
+    aws_secret_access_key: Required[str]
+    aws_region: NotRequired[str]
+
+
+class GcpRegistryCredentialsDict(TypedDict, total=False):
+    type: Required[Literal[RegistryCredentialType.GCP, "gcp"]]
+    gcp_service_account_json: Required[str]
+
+
+class AzureRegistryCredentialsDict(TypedDict, total=False):
+    type: Required[Literal[RegistryCredentialType.AZURE, "azure"]]
+    azure_client_id: Required[str]
+    azure_client_secret: Required[str]
+    azure_tenant_id: Required[str]
+
+
+RegistryCredentialsDict: TypeAlias = (
+    BasicRegistryCredentialsDict
+    | AwsRegistryCredentialsDict
+    | GcpRegistryCredentialsDict
+    | AzureRegistryCredentialsDict
+)
 
 
 class ImageConfigDict(TypedDict, total=False):
@@ -25,7 +52,7 @@ class ImageConfigDict(TypedDict, total=False):
     cmd: list[str] | None
     working_dir: str
     user: str
-    env: dict[str, Any] | None
+    env: dict[str, str] | None
 
 
 class UploadTemplateResponseDict(TypedDict):
@@ -39,17 +66,17 @@ class UploadTemplateResponseDict(TypedDict):
 
 @dataclass(slots=True)
 class ImageConfig:
-    entrypoint: list[str] = field(default_factory=list)
-    cmd: list[str] = field(default_factory=list)
+    entrypoint: list[str] | None = None
+    cmd: list[str] | None = None
     working_dir: str = ""
     user: str = ""
-    env: dict[str, Any] | None = None
+    env: dict[str, str] | None = None
 
     @classmethod
     def from_dict(cls, data: ImageConfigDict) -> ImageConfig:
         return cls(
-            entrypoint=data.get("entrypoint") or [],
-            cmd=data.get("cmd") or [],
+            entrypoint=data.get("entrypoint"),
+            cmd=data.get("cmd"),
             working_dir=data.get("working_dir", ""),
             user=data.get("user", ""),
             env=data.get("env"),
