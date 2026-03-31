@@ -16,7 +16,7 @@ class SandboxCreateResponseDict(TypedDict):
     state: SandboxState
     auto_pause: bool
     created_at: str
-    network_policy: NotRequired[NetworkPolicyDict | None]
+    network_policy: NetworkPolicyDict | None
 
 
 class SandboxStatusResponseDict(TypedDict):
@@ -188,6 +188,7 @@ class ImageConfigDict(TypedDict, total=False):
     entrypoint: list[str] | None
     cmd: list[str] | None
     working_dir: str | None
+    user: str
     env: dict[str, Any] | None
 
 

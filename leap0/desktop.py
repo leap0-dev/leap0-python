@@ -40,9 +40,10 @@ from .models import (
 class DesktopClient:
     """Control a graphical Linux desktop inside a sandbox.
 
-    Requires a sandbox created with the ``system/desktop:v0.1.0`` template.
-    Provides display info, screenshots, mouse/keyboard input, and screen
-    recording.
+    Requires a sandbox created with the
+    :data:`~leap0.constants.DEFAULT_DESKTOP_TEMPLATE_NAME`
+    (``system/desktop:v0.1.0``) template.  Provides display info, screenshots,
+    mouse/keyboard input, and screen recording.
     """
 
     def __init__(self, transport: Transport, *, sandbox_domain: str | None = None):

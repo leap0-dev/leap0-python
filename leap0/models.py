@@ -392,6 +392,7 @@ class ImageConfig:
     entrypoint: list[str] = field(default_factory=list)
     cmd: list[str] = field(default_factory=list)
     working_dir: str | None = None
+    user: str = ""
     env: dict[str, Any] | None = None
 
     @classmethod
@@ -400,6 +401,7 @@ class ImageConfig:
             entrypoint=data.get("entrypoint") or [],
             cmd=data.get("cmd") or [],
             working_dir=data.get("working_dir"),
+            user=data.get("user", ""),
             env=data.get("env"),
         )
 
