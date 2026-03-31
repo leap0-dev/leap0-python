@@ -1,16 +1,17 @@
 from __future__ import annotations
 
+import time
 from collections.abc import Iterator
 from typing import Any, cast
 
 import httpx
-from tenacity import retry, retry_if_exception, retry_if_exception_type, stop_after_delay, wait_exponential
+from tenacity import retry, retry_if_exception, stop_after_delay, wait_exponential
 
 from ._transport import Transport
 from ._utils.errors import intercept_errors
 from ._utils.stream import iter_sse_events
 from ._utils.url import sandbox_base_url
-from .common.errors import Leap0Error
+from .common.errors import Leap0Error, Leap0TimeoutError
 from .common.desktop import (
     DesktopDisplayInfo,
     DesktopDisplayInfoDict,
@@ -354,14 +355,30 @@ class DesktopClient:
         return DesktopProcessErrors.from_dict(data)
 
     @intercept_errors("Failed to stream status: ")
-    def status_stream(self, sandbox: SandboxRef) -> Iterator[DesktopProcessStatusList]:
-        """Subscribe to a live SSE stream of process status updates."""
+    def status_stream(self, sandbox: SandboxRef, *, deadline: float | None = None) -> Iterator[DesktopProcessStatusList]:
+        """Subscribe to a live SSE stream of process status updates.
+
+        Args:
+            sandbox: Sandbox ID or object.
+            deadline: Absolute ``time.monotonic()`` deadline.  When set, a
+                :class:`Leap0TimeoutError` is raised once the deadline is
+                exceeded.  ``None`` means no deadline.
+        """
         url = f"{sandbox_base_url(sandbox_id_of(sandbox), self._sandbox_domain)}/api/status/stream"
         response = self._transport.stream("GET", url)
         try:
             for event in iter_sse_events(response.iter_lines()):
-                if isinstance(event, str):
-                    raise Leap0Error("Desktop status stream error", body=event)
+                if deadline is not None and time.monotonic() >= deadline:
+                    raise Leap0TimeoutError("Desktop status stream timed out")
+                # Non-dict events are heartbeat/info frames; skip them.
+                if not isinstance(event, dict):
+                    continue
+                # Explicit error envelope from the server.
+                if "error" in event:
+                    raise Leap0Error(
+                        "Desktop status stream error",
+                        body=str(event["error"]),
+                    )
                 yield DesktopProcessStatusList.from_dict(cast(DesktopProcessStatusListDict, event))
         finally:
             response.close()
@@ -382,26 +399,33 @@ class DesktopClient:
             Leap0TimeoutError: If the desktop does not become ready within
                 *timeout* seconds.
         """
-        from .common.errors import Leap0TimeoutError
 
         def _is_transient_leap0(exc: BaseException) -> bool:
-            """Return True only for a Leap0Error with a 502 status code."""
-            return isinstance(exc, Leap0Error) and exc.status_code == 502
+            """Return True for transient Leap0Errors (not timeouts)."""
+            if isinstance(exc, Leap0TimeoutError):
+                return False
+            return isinstance(exc, Leap0Error)
+
+        deadline = time.monotonic() + timeout
 
         @retry(
             stop=stop_after_delay(timeout),
             wait=wait_exponential(multiplier=0.5, min=0.5, max=5),
-            retry=retry_if_exception_type((ConnectionError, OSError)) | retry_if_exception(_is_transient_leap0),
+            retry=retry_if_exception(_is_transient_leap0),
             reraise=True,
         )
         def _poll() -> None:
-            for status in self.status_stream(sandbox):
+            for status in self.status_stream(sandbox, deadline=deadline):
                 if status.status == "running":
                     return
             raise Leap0Error("Desktop status stream ended without reaching 'running' state")
 
         try:
             _poll()
+        except Leap0TimeoutError as exc:
+            raise Leap0TimeoutError(
+                f"Desktop did not become ready within {timeout:.0f}s: {exc}"
+            ) from exc
         except Leap0Error as exc:
             raise Leap0TimeoutError(
                 f"Desktop did not become ready within {timeout:.0f}s: {exc}"
