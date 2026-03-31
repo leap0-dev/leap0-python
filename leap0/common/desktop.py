@@ -242,11 +242,14 @@ class DesktopProcessStatusList:
 
     @classmethod
     def from_dict(cls, data: DesktopProcessStatusListDict) -> DesktopProcessStatusList:
+        raw_items = data.get("items")
+        if not isinstance(raw_items, (list, tuple)):
+            raw_items = []
         return cls(
             status=data.get("status", ""),
             items=[
                 DesktopProcessStatus.from_dict(item)  # type: ignore[arg-type]
-                for item in data.get("items", [])
+                for item in raw_items
                 if isinstance(item, dict)
             ],
             running=_safe_int(data.get("running"), 0),

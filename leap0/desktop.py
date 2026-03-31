@@ -4,7 +4,7 @@ from collections.abc import Iterator
 from typing import Any, cast
 
 import httpx
-from tenacity import retry, retry_if_exception_type, stop_after_delay, wait_exponential
+from tenacity import retry, retry_if_exception, retry_if_exception_type, stop_after_delay, wait_exponential
 
 from ._transport import Transport
 from ._utils.errors import intercept_errors
@@ -384,10 +384,14 @@ class DesktopClient:
         """
         from .common.errors import Leap0TimeoutError
 
+        def _is_transient_leap0(exc: BaseException) -> bool:
+            """Return True only for a Leap0Error with a 502 status code."""
+            return isinstance(exc, Leap0Error) and exc.status_code == 502
+
         @retry(
             stop=stop_after_delay(timeout),
             wait=wait_exponential(multiplier=0.5, min=0.5, max=5),
-            retry=retry_if_exception_type((Leap0Error, ConnectionError, OSError)),
+            retry=retry_if_exception_type((ConnectionError, OSError)) | retry_if_exception(_is_transient_leap0),
             reraise=True,
         )
         def _poll() -> None:

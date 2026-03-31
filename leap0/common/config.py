@@ -39,11 +39,24 @@ class Leap0Config:
     bearer: bool = True
 
     def __post_init__(self) -> None:
-        if self.api_key is None:
-            self.api_key = os.environ.get("LEAP0_API_KEY")
+        # Resolve api_key from env if not provided, then strip and validate.
+        api_key = self.api_key
+        if api_key is None:
+            api_key = os.environ.get("LEAP0_API_KEY")
+        self.api_key = api_key.strip() if api_key else api_key
         if not self.api_key:
             raise ValueError("api_key is required or set LEAP0_API_KEY")
-        if not self.base_url or not self.base_url.strip():
-            self.base_url = os.environ.get("LEAP0_BASE_URL") or DEFAULT_BASE_URL
-        if not self.sandbox_domain or not self.sandbox_domain.strip():
-            self.sandbox_domain = os.environ.get("LEAP0_SANDBOX_DOMAIN") or DEFAULT_SANDBOX_DOMAIN
+
+        # Resolve base_url: strip provided/env value, fall back to default.
+        base_url = self.base_url.strip() if self.base_url else None
+        if not base_url:
+            env_base = os.environ.get("LEAP0_BASE_URL")
+            base_url = env_base.strip() if env_base else None
+        self.base_url = base_url or DEFAULT_BASE_URL
+
+        # Resolve sandbox_domain: strip provided/env value, fall back to default.
+        sandbox_domain = self.sandbox_domain.strip() if self.sandbox_domain else None
+        if not sandbox_domain:
+            env_sd = os.environ.get("LEAP0_SANDBOX_DOMAIN")
+            sandbox_domain = env_sd.strip() if env_sd else None
+        self.sandbox_domain = sandbox_domain or DEFAULT_SANDBOX_DOMAIN
