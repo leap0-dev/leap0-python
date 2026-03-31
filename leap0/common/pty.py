@@ -6,13 +6,8 @@ from typing import TypedDict
 from websockets.sync.client import ClientConnection
 
 
-class PtyCreateResponseDict(TypedDict, total=False):
-    session_id: str
-
-
 class PtySessionInfoDict(TypedDict, total=False):
     id: str
-    session_id: str
     cwd: str
     envs: dict[str, str]
     cols: int
@@ -40,7 +35,7 @@ class PtySession:
     @classmethod
     def from_dict(cls, data: PtySessionInfoDict) -> PtySession:
         return cls(
-            id=data.get("id", data.get("session_id", "")),
+            id=data.get("id", ""),
             cwd=data.get("cwd", ""),
             envs=data.get("envs") or {},
             cols=int(data.get("cols", 0)),

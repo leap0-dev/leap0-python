@@ -9,11 +9,27 @@ class TestPtySession:
         assert p.id == "pty_1"
         assert p.cols == 80
 
-    def test_from_dict_with_session_id(self):
-        assert PtySession.from_dict({"session_id": "pty_2", "cols": 120}).id == "pty_2"
-
-    def test_prefers_id_over_session_id(self):
-        assert PtySession.from_dict({"id": "pty_a", "session_id": "pty_b"}).id == "pty_a"
+    def test_from_dict_with_full_session_info(self):
+        p = PtySession.from_dict(
+            {
+                "id": "pty_2",
+                "cwd": "/tmp",
+                "envs": {"TERM": "xterm-256color"},
+                "cols": 120,
+                "rows": 40,
+                "created_at": "2026-03-31T00:00:00Z",
+                "active": True,
+                "lazy_start": False,
+            }
+        )
+        assert p.id == "pty_2"
+        assert p.cwd == "/tmp"
+        assert p.envs == {"TERM": "xterm-256color"}
+        assert p.cols == 120
+        assert p.rows == 40
+        assert p.created_at == "2026-03-31T00:00:00Z"
+        assert p.active is True
+        assert p.lazy_start is False
 
     def test_empty_dict(self):
         p = PtySession.from_dict({})
