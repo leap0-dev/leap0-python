@@ -108,7 +108,7 @@ class AsyncLeap0Client:
         timeout: float = DEFAULT_CLIENT_TIMEOUT,
         auth_header: str = "authorization",
         bearer: bool = True,
-        otel_enabled: bool | None = None,
+        sdk_otel_enabled: bool | None = None,
     ):
         if config is not None:
             provided_overrides = {
@@ -117,7 +117,7 @@ class AsyncLeap0Client:
                 "sandbox_domain": sandbox_domain,
                 "auth_header": auth_header if auth_header != "authorization" else None,
                 "bearer": bearer if bearer is not True else None,
-                "otel_enabled": otel_enabled,
+                "sdk_otel_enabled": sdk_otel_enabled,
             }
             if timeout != DEFAULT_CLIENT_TIMEOUT:
                 provided_overrides["timeout"] = timeout
@@ -133,7 +133,7 @@ class AsyncLeap0Client:
                 timeout=timeout,
                 auth_header=auth_header,
                 bearer=bearer,
-                otel_enabled=otel_enabled,
+                sdk_otel_enabled=sdk_otel_enabled,
             )
         self._transport = AsyncTransport(
             api_key=config.api_key,
@@ -164,7 +164,7 @@ class AsyncLeap0Client:
         self.code_interpreter = AsyncCodeInterpreterClient(self._transport, sandbox_domain=config.sandbox_domain)
         self.desktop = AsyncDesktopClient(self._transport, sandbox_domain=config.sandbox_domain)
 
-        if config.otel_enabled:
+        if config.sdk_otel_enabled:
             self._init_otel()
 
     def _init_otel(self) -> None:
