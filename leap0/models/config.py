@@ -40,7 +40,7 @@ class Leap0Config(BaseModel):
     timeout: float = DEFAULT_CLIENT_TIMEOUT
     auth_header: str = "authorization"
     bearer: bool = True
-    otel_enabled: bool | None = None
+    sdk_otel_enabled: bool | None = None
 
     @model_validator(mode="after")
     def _resolve_and_validate(self) -> Leap0Config:
@@ -65,8 +65,8 @@ class Leap0Config(BaseModel):
         self.timeout = timeout
         self.api_key = api_key
         self.auth_header = auth_header
-        if self.otel_enabled is None:
-            self.otel_enabled = os.environ.get("LEAP0_OTEL_ENABLED") == "true" or bool(
+        if self.sdk_otel_enabled is None:
+            self.sdk_otel_enabled = os.environ.get("LEAP0_SDK_OTEL_ENABLED") == "true" or bool(
                 os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT")
             )
         self.base_url = _resolve_env_str(self.base_url, "LEAP0_BASE_URL", DEFAULT_BASE_URL)

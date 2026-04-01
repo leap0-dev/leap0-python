@@ -89,7 +89,7 @@ class Leap0Client:
         timeout: float = DEFAULT_CLIENT_TIMEOUT,
         auth_header: str = "authorization",
         bearer: bool = True,
-        otel_enabled: bool | None = None,
+        sdk_otel_enabled: bool | None = None,
     ):
         config = Leap0Config(
             api_key=api_key,
@@ -98,7 +98,7 @@ class Leap0Client:
             timeout=timeout,
             auth_header=auth_header,
             bearer=bearer,
-            otel_enabled=otel_enabled,
+            sdk_otel_enabled=sdk_otel_enabled,
         )
         self._transport = Transport(
             api_key=config.api_key,
@@ -128,7 +128,7 @@ class Leap0Client:
         self.code_interpreter = CodeInterpreterClient(self._transport, sandbox_domain=config.sandbox_domain)
         self.desktop = DesktopClient(self._transport, sandbox_domain=config.sandbox_domain)
 
-        if config.otel_enabled:
+        if config.sdk_otel_enabled:
             self._init_otel()
 
     def _init_otel(self) -> None:
@@ -223,5 +223,5 @@ def Leap0(config: Leap0Config) -> Leap0Client:
         timeout=config.timeout,
         auth_header=config.auth_header,
         bearer=config.bearer,
-        otel_enabled=config.otel_enabled,
+        sdk_otel_enabled=config.sdk_otel_enabled,
     )

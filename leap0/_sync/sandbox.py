@@ -137,11 +137,12 @@ class Sandbox:
 
 
 def _inject_otel_env(env_vars: dict[str, str] | None) -> dict[str, str] | None:
+    endpoint = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT")
+    if not endpoint:
+        raise ValueError(
+            "otel_export=True requires OTEL_EXPORTER_OTLP_ENDPOINT in the local environment"
+        )
     otel = {k: v for k in _OTEL_ENV_KEYS if (v := os.environ.get(k))}
-    if not otel and not env_vars:
-        return None
-    if not otel:
-        return env_vars
     merged = dict(otel)
     if env_vars:
         merged.update(env_vars)
@@ -183,7 +184,7 @@ class SandboxesClient(Generic[SandboxT]):
         memory_mib: int = DEFAULT_MEMORY_MIB,
         timeout_min: int = DEFAULT_TIMEOUT_MIN,
         auto_pause: bool = False,
-        telemetry: bool = False,
+        otel_export: bool = False,
         env_vars: dict[str, str] | None = None,
         network_policy: NetworkPolicyDict | None = None,
         http_timeout: float | None = None,
@@ -196,9 +197,9 @@ class SandboxesClient(Generic[SandboxT]):
             memory_mib: Memory in MiB (512 to 8192, must be even).
             timeout_min: Sandbox timeout in minutes (1 to 480, default 5).
             auto_pause: Automatically pause the sandbox into a snapshot on timeout.
-            telemetry: Enable OpenTelemetry export. Reads ``OTEL_EXPORTER_OTLP_ENDPOINT``
-                and ``OTEL_EXPORTER_OTLP_HEADERS`` from the local environment and
-                injects them into the sandbox.
+            otel_export: Inject OpenTelemetry exporter environment into the sandbox.
+                Requires ``OTEL_EXPORTER_OTLP_ENDPOINT`` in the local environment and
+                also forwards ``OTEL_EXPORTER_OTLP_HEADERS`` when present.
             env_vars: Environment variables to set inside the sandbox.
             network_policy: Outbound network policy for the sandbox.
             http_timeout: Optional HTTP request timeout in seconds for this SDK call.
@@ -212,12 +213,12 @@ class SandboxesClient(Generic[SandboxT]):
             memory_mib=memory_mib,
             timeout_min=timeout_min,
             auto_pause=auto_pause,
-            telemetry=telemetry,
-            env_vars=_inject_otel_env(env_vars) if telemetry else env_vars,
+            otel_export=otel_export,
+            env_vars=_inject_otel_env(env_vars) if otel_export else env_vars,
             network_policy=network_policy,
         )
         payload = params.to_payload()
-        payload.pop("telemetry", None)
+        payload.pop("otel_export", None)
         data: SandboxCreateResponseDict = self._transport.request_json(
             "POST", "/v1/sandbox", json=payload, expected_status=201,
             timeout=http_timeout,

@@ -35,7 +35,7 @@ class CreateSandboxParams(BaseModel):
     memory_mib: int = DEFAULT_MEMORY_MIB
     timeout_min: int = DEFAULT_TIMEOUT_MIN
     auto_pause: bool = False
-    telemetry: bool = False
+    otel_export: bool = False
     env_vars: dict[str, str] | None = None
     network_policy: NetworkPolicyDict | None = None
 
