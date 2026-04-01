@@ -43,3 +43,16 @@ class TestCodeInterpreterClient:
                     code="print('ok')",
                 )
             )
+
+    def test_delete_context_passes_http_timeout(self, mock_transport):
+        client = CodeInterpreterClient(mock_transport, sandbox_domain="sandbox.example.com")
+
+        client.delete_context("sbx-1", "ctx-1", http_timeout=12.5)
+
+        mock_transport.request_target.assert_called_once_with(
+            "DELETE",
+            "https://sbx-1.sandbox.example.com/contexts/ctx-1",
+            json=None,
+            expected_status=204,
+            timeout=12.5,
+        )

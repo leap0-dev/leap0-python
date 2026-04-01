@@ -150,14 +150,26 @@ class CodeInterpreterClient:
         return CodeContext.from_dict(data)
 
     @intercept_errors("Failed to delete execution context: ")
-    def delete_context(self, sandbox: SandboxRef, context_id: str) -> None:
+    def delete_context(
+        self,
+        sandbox: SandboxRef,
+        context_id: str,
+        http_timeout: float | None = None,
+    ) -> None:
         """Delete an execution context.
 
         Args:
             sandbox: Sandbox ID or object.
             context_id: Execution context identifier.
+            http_timeout: Optional HTTP request timeout in seconds for this SDK call.
         """
-        self._request("DELETE", sandbox, f"/contexts/{context_id}", expected_status=204)
+        self._request(
+            "DELETE",
+            sandbox,
+            f"/contexts/{context_id}",
+            expected_status=204,
+            http_timeout=http_timeout,
+        )
 
     @intercept_errors("Failed to execute code: ")
     def execute(

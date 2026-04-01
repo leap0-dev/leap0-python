@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from leap0._sync.desktop import DesktopClient
-from leap0.models.errors import Leap0Error, Leap0TimeoutError
+from leap0.models.errors import Leap0Error
 
 
 class TestDesktopClient:
@@ -41,7 +41,7 @@ class TestDesktopClient:
         ])
         mock_transport.stream.side_effect = [bad, good]
 
-        with pytest.raises(Leap0TimeoutError, match="Malformed desktop status stream event"):
+        with pytest.raises(Leap0Error, match="Malformed desktop status stream event"):
             DesktopClient(mock_transport, sandbox_domain="sandbox.example.com").wait_until_ready("sbx-1", timeout=1)
 
         assert mock_transport.stream.call_count == 1
