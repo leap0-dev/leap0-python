@@ -6,7 +6,7 @@ from typing import Any, cast
 from websockets.sync.client import connect
 
 from .._internal.types import JsonObject
-from ..models.pty import CreatePtySessionParams, PtyConnection, PtySession
+from ..models.pty import CreatePtySessionParams, PtyConnection, PtyResizeParams, PtySession
 from ..models.sandbox import SandboxRef, sandbox_id_of
 from .._schemas.pty import PtyListResponseDict, PtySessionInfoDict
 from .._utils.errors import intercept_errors
@@ -135,7 +135,7 @@ class PtyClient:
         Returns:
             object: Result returned by this operation.
         """
-        payload = CreatePtySessionParams(cols=cols, rows=rows).to_payload()
+        payload = PtyResizeParams(cols=cols, rows=rows).to_payload()
         encoded_session_id = quote(session_id, safe="")
         data = cast(PtySessionInfoDict, self._transport.request_json("POST", f"/v1/sandbox/{sandbox_id_of(sandbox)}/pty/{encoded_session_id}/resize", json=payload))
         return PtySession.from_dict(data)

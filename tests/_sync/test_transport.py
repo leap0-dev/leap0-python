@@ -97,3 +97,22 @@ class TestTargetUrl:
 class TestBaseUrlNormalization:
     def test_trailing_slash_stripped(self):
         assert Transport(api_key="k", base_url="https://api.example.com/").base_url == "https://api.example.com"
+
+
+class TestTimeoutHandling:
+    def test_request_uses_zero_timeout(self, transport):
+        transport._client = MagicMock()
+        transport._client.request.return_value = MagicMock(spec=httpx.Response, status_code=200)
+
+        transport.request("GET", "/test", timeout=0)
+
+        assert transport._client.request.call_args.kwargs["timeout"] == 0
+
+    def test_request_uses_zero_override(self, transport):
+        transport._client = MagicMock()
+        transport._client.request.return_value = MagicMock(spec=httpx.Response, status_code=200)
+
+        with transport.override_timeout(0):
+            transport.request("GET", "/test")
+
+        assert transport._client.request.call_args.kwargs["timeout"] == 0

@@ -599,9 +599,11 @@ class DesktopClient:
                     event = next(events)
                 except StopIteration:
                     break
-                # Non-dict events are heartbeat/info frames; skip them.
                 if not isinstance(event, dict):
-                    continue
+                    raise ValueError(
+                        "Malformed desktop status stream event "
+                        f"for sandbox={sandbox_id_of(sandbox)!r}, source='status_stream': {event!r}"
+                    )
                 # Explicit error envelope from the server.
                 if "error" in event:
                     raise Leap0Error(
