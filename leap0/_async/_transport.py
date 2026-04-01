@@ -155,13 +155,12 @@ class AsyncTransport:
         timeout: float | None = None,
     ) -> httpx.Response:
         effective = timeout if timeout is not None else (self._timeout_override.get() or self.timeout)
-        timeout_dict = {"connect": effective, "read": effective, "write": effective, "pool": effective}
         request = self._client.build_request(
             method,
             self._target_url(target),
             json=json,
             headers=self.headers(),
-            extensions={"timeout": timeout_dict},
+            timeout=httpx.Timeout(effective),
         )
         response = await self._client.send(request, stream=True)
         if response.status_code >= 400:

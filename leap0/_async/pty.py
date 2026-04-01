@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from urllib.parse import quote
 from typing import Any, cast
 
 from websockets.asyncio.client import ClientConnection, connect
@@ -96,11 +97,6 @@ class AsyncPtyClient:
             lazy_start: Defer shell start until the first WebSocket connection.
             http_timeout: Optional HTTP request timeout in seconds for this SDK call.
 
-        Args:
-            sandbox: Sandbox ID or object.
-            session_id: PTY session identifier.
-            http_timeout: Optional HTTP request timeout in seconds for this SDK call.
-
         Returns:
             PtySession: Metadata for the created PTY session.
         """
@@ -132,7 +128,8 @@ class AsyncPtyClient:
         Returns:
             object: Result returned by this operation.
         """
-        data = cast(PtySessionInfoDict, await self._transport.request_json("GET", f"/v1/sandbox/{sandbox_id_of(sandbox)}/pty/{session_id}"))
+        encoded_session_id = quote(session_id, safe="")
+        data = cast(PtySessionInfoDict, await self._transport.request_json("GET", f"/v1/sandbox/{sandbox_id_of(sandbox)}/pty/{encoded_session_id}"))
         return PtySession.from_dict(data)
 
     @intercept_errors("Failed to delete PTY session: ")
@@ -144,7 +141,8 @@ class AsyncPtyClient:
             session_id: PTY session identifier.
             http_timeout: Optional HTTP request timeout in seconds for this SDK call.
         """
-        await self._transport.request("DELETE", f"/v1/sandbox/{sandbox_id_of(sandbox)}/pty/{session_id}", expected_status=204, timeout=http_timeout)
+        encoded_session_id = quote(session_id, safe="")
+        await self._transport.request("DELETE", f"/v1/sandbox/{sandbox_id_of(sandbox)}/pty/{encoded_session_id}", expected_status=204, timeout=http_timeout)
 
     @intercept_errors("Failed to resize PTY session: ")
     async def resize(self, sandbox: SandboxRef, session_id: str, *, cols: int, rows: int) -> PtySession:
@@ -159,10 +157,12 @@ class AsyncPtyClient:
         Returns:
             object: Result returned by this operation.
         """
+        payload = CreatePtySessionParams(cols=cols, rows=rows).to_payload()
+        encoded_session_id = quote(session_id, safe="")
         data = cast(PtySessionInfoDict, await self._transport.request_json(
             "POST",
-            f"/v1/sandbox/{sandbox_id_of(sandbox)}/pty/{session_id}/resize",
-            json={"cols": cols, "rows": rows},
+            f"/v1/sandbox/{sandbox_id_of(sandbox)}/pty/{encoded_session_id}/resize",
+            json=payload,
         ))
         return PtySession.from_dict(data)
 
@@ -176,11 +176,16 @@ class AsyncPtyClient:
         Returns:
             object: Result returned by this operation.
         """
-        return websocket_url_from_http(f"{self._transport.base_url}/v1/sandbox/{sandbox_id_of(sandbox)}/pty/{session_id}/connect")
+        encoded_session_id = quote(session_id, safe="")
+        return websocket_url_from_http(f"{self._transport.base_url}/v1/sandbox/{sandbox_id_of(sandbox)}/pty/{encoded_session_id}/connect")
 
     @intercept_errors("Failed to connect to PTY session: ")
     async def connect(self, sandbox: SandboxRef, session_id: str, http_timeout: float | None = None, **kwargs: Any) -> AsyncPtyConnection:
         """Open a WebSocket connection for interactive terminal I/O.
+
+        Important:
+            Callers are responsible for closing the returned connection, ideally
+            with ``try/finally`` or an async context manager wrapper.
 
         Args:
             sandbox: Sandbox ID or object.
@@ -194,7 +199,9 @@ class AsyncPtyClient:
         url = self.websocket_url(sandbox, session_id)
         if http_timeout is not None and "open_timeout" not in kwargs:
             kwargs["open_timeout"] = http_timeout
-        websocket = await connect(url, additional_headers={self._transport.auth_header: self._transport.auth_value}, **kwargs)
+        additional_headers = dict(kwargs.pop("additional_headers", {}) or {})
+        additional_headers[self._transport.auth_header] = self._transport.auth_value
+        websocket = await connect(url, additional_headers=additional_headers, **kwargs)
         return AsyncPtyConnection(websocket)
 
 

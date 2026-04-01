@@ -49,7 +49,6 @@ def _iter_docstring_section_failures() -> list[str]:
                     if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)) and not item.name.startswith("_"):
                         doc = ast.get_docstring(item) or ""
                         args = [a.arg for a in item.args.args + item.args.kwonlyargs if a.arg != "self" and a.arg != "cls"]
-                        has_return = not isinstance(item, ast.FunctionDef) or True
                         if args and "Args:" not in doc:
                             failures.append(f"{rel}:{node.name}.{item.name} missing Args")
                         returns_none = False

@@ -17,9 +17,10 @@ from leap0 import (
 
 def main() -> None:
     client = Leap0(Leap0Config())
-    sandbox: Sandbox = client.sandboxes.create(template_name=DEFAULT_DESKTOP_TEMPLATE_NAME)
+    sandbox: Sandbox | None = None
 
     try:
+        sandbox = client.sandboxes.create(template_name=DEFAULT_DESKTOP_TEMPLATE_NAME)
         sandbox.desktop.wait_until_ready(timeout=60.0)
         print("Desktop:", sandbox.desktop.desktop_url())
 
@@ -34,7 +35,8 @@ def main() -> None:
         print("Saved screenshot to desktop-screenshot.png")
     finally:
         try:
-            sandbox.delete()
+            if sandbox is not None:
+                sandbox.delete()
         except Leap0Error:
             pass
         finally:

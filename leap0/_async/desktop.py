@@ -585,7 +585,7 @@ class AsyncDesktopClient:
         last_error: Exception | None = None
         while time.monotonic() < deadline:
             try:
-                async for status in self.status_stream(sandbox, deadline=deadline):
+                async for status in self.status_stream(sandbox, deadline=deadline, http_timeout=http_timeout):
                     if status.status == "running":
                         return
                 raise Leap0Error("Desktop status stream ended without reaching 'running' state")

@@ -261,13 +261,18 @@ class SandboxesClient(Generic[SandboxT]):
         return self._wrap_sandbox(SandboxStatus.from_dict(data))
 
     @intercept_errors("Failed to delete sandbox: ")
-    def delete(self, sandbox: SandboxRef) -> None:
+    def delete(self, sandbox: SandboxRef, http_timeout: float | None = None) -> None:
         """Terminate and delete a sandbox.
         
         Args:
             sandbox: Sandbox ID or object.
         """
-        self._transport.request("DELETE", f"/v1/sandbox/{sandbox_id_of(sandbox)}/", expected_status=204)
+        self._transport.request(
+            "DELETE",
+            f"/v1/sandbox/{sandbox_id_of(sandbox)}/",
+            expected_status=204,
+            timeout=http_timeout,
+        )
 
     def invoke_url(self, sandbox: SandboxRef, path: str = "/", *, port: int | None = None) -> str:
         """Build an HTTPS URL that routes directly to the sandbox.

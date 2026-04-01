@@ -634,7 +634,7 @@ class DesktopClient:
             reraise=True,
         )
         def _poll() -> None:
-            for status in self.status_stream(sandbox, deadline=deadline):
+            for status in self.status_stream(sandbox, deadline=deadline, http_timeout=http_timeout):
                 if status.status == "running":
                     return
             raise Leap0Error("Desktop status stream ended without reaching 'running' state")

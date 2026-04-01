@@ -40,7 +40,7 @@ class AsyncProcessClient:
 
         Example:
             ```python
-            result = client.process.execute(
+            result = await client.process.execute(
                 sandbox,
                 command="ls -la /workspace",
             )

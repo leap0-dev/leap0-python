@@ -133,7 +133,13 @@ class FilesystemClient:
             )
             ```
         """
-        self.write_bytes(sandbox, path=path, content=content.encode(encoding), permissions=permissions)
+        self.write_bytes(
+            sandbox,
+            path=path,
+            content=content.encode(encoding),
+            permissions=permissions,
+            http_timeout=http_timeout,
+        )
 
     @intercept_errors("Failed to write files: ")
     def write_files_bytes(self, sandbox: SandboxRef, *, files: dict[str, bytes], http_timeout: float | None = None) -> None:
@@ -170,7 +176,11 @@ class FilesystemClient:
             encoding: Text encoding used before upload.
             http_timeout: Optional HTTP request timeout in seconds for this SDK call.
         """
-        self.write_files_bytes(sandbox, files={p: c.encode(encoding) for p, c in files.items()})
+        self.write_files_bytes(
+            sandbox,
+            files={p: c.encode(encoding) for p, c in files.items()},
+            http_timeout=http_timeout,
+        )
 
     @intercept_errors("Failed to read file: ")
     def read_bytes(
@@ -265,10 +275,17 @@ class FilesystemClient:
             limit=limit,
             head=head,
             tail=tail,
+            http_timeout=http_timeout,
         ).decode(encoding)
 
     @intercept_errors("Failed to read files: ")
-    def read_files_bytes(self, sandbox: SandboxRef, *, paths: list[str]) -> dict[str, bytes]:
+    def read_files_bytes(
+        self,
+        sandbox: SandboxRef,
+        *,
+        paths: list[str],
+        http_timeout: float | None = None,
+    ) -> dict[str, bytes]:
         """Read multiple files and return raw bytes keyed by path.
         
         Args:
@@ -278,7 +295,12 @@ class FilesystemClient:
         Returns:
             object: Result returned by this operation.
         """
-        response = self._transport.request("POST", f"/v1/sandbox/{sandbox_id_of(sandbox)}/filesystem/read-files", json={"paths": paths})
+        response = self._transport.request(
+            "POST",
+            f"/v1/sandbox/{sandbox_id_of(sandbox)}/filesystem/read-files",
+            json={"paths": paths},
+            timeout=http_timeout,
+        )
         return _parse_multipart_response(response.headers.get("content-type", ""), response.content)
 
     @intercept_errors("Failed to read files: ")
@@ -292,7 +314,14 @@ class FilesystemClient:
         Returns:
             object: Result returned by this operation.
         """
-        return {path: content.decode(encoding) for path, content in self.read_files_bytes(sandbox, paths=paths).items()}
+        return {
+            path: content.decode(encoding)
+            for path, content in self.read_files_bytes(
+                sandbox,
+                paths=paths,
+                http_timeout=http_timeout,
+            ).items()
+        }
 
     @intercept_errors("Failed to delete: ")
     def delete(self, sandbox: SandboxRef, *, path: str, recursive: bool = False, http_timeout: float | None = None) -> None:
