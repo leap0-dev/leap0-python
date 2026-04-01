@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from types import TracebackType
 from typing import Self
+import warnings
 
 from opentelemetry import metrics, trace
 from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
@@ -89,8 +90,17 @@ class Leap0Client:
         timeout: float = DEFAULT_CLIENT_TIMEOUT,
         auth_header: str = "authorization",
         bearer: bool = True,
+        otel_enabled: bool | None = None,
         sdk_otel_enabled: bool | None = None,
     ):
+        if otel_enabled is not None:
+            warnings.warn(
+                "otel_enabled is deprecated; use sdk_otel_enabled instead",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            if sdk_otel_enabled is None:
+                sdk_otel_enabled = otel_enabled
         config = Leap0Config(
             api_key=api_key,
             base_url=base_url,

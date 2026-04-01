@@ -6,7 +6,14 @@ from functools import wraps
 from typing import TYPE_CHECKING, Generic, Protocol, TypeVar, cast
 
 from .._internal.types import SandboxFactory
-from ..models.config import DEFAULT_MEMORY_MIB, DEFAULT_TEMPLATE_NAME, DEFAULT_TIMEOUT_MIN, DEFAULT_VCPU
+from ..models.config import (
+    DEFAULT_MEMORY_MIB,
+    DEFAULT_TEMPLATE_NAME,
+    DEFAULT_TIMEOUT_MIN,
+    DEFAULT_VCPU,
+    OTEL_EXPORTER_OTLP_ENDPOINT_ENV,
+    OTEL_EXPORTER_OTLP_HEADERS_ENV,
+)
 from ..models.sandbox import CreateSandboxParams, Sandbox as SandboxData, SandboxRef, SandboxStatus, sandbox_id_of
 from .._schemas.sandbox import NetworkPolicyDict, SandboxCreateResponseDict, SandboxStatusResponseDict
 from .._utils.errors import intercept_errors
@@ -20,8 +27,8 @@ if TYPE_CHECKING:
 
 
 _OTEL_ENV_KEYS = (
-    "OTEL_EXPORTER_OTLP_ENDPOINT",
-    "OTEL_EXPORTER_OTLP_HEADERS",
+    OTEL_EXPORTER_OTLP_ENDPOINT_ENV,
+    OTEL_EXPORTER_OTLP_HEADERS_ENV,
 )
 
 
@@ -140,12 +147,18 @@ class AsyncSandbox:
 
 
 def _inject_otel_env(env_vars: dict[str, str] | None) -> dict[str, str] | None:
-    endpoint = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT")
+    endpoint = os.environ.get(OTEL_EXPORTER_OTLP_ENDPOINT_ENV)
     if not endpoint:
         raise ValueError(
-            "otel_export=True requires OTEL_EXPORTER_OTLP_ENDPOINT in the local environment"
+            f"otel_export=True requires {OTEL_EXPORTER_OTLP_ENDPOINT_ENV} in the local environment"
         )
-    otel = {k: v for k in _OTEL_ENV_KEYS if (v := os.environ.get(k))}
+    otel = {OTEL_EXPORTER_OTLP_ENDPOINT_ENV: endpoint}
+    for key in _OTEL_ENV_KEYS:
+        if key == OTEL_EXPORTER_OTLP_ENDPOINT_ENV:
+            continue
+        value = os.environ.get(key)
+        if value:
+            otel[key] = value
     merged = dict(otel)
     if env_vars:
         merged.update(env_vars)

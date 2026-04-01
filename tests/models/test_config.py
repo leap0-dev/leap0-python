@@ -58,3 +58,23 @@ class TestLeap0Client:
     def test_context_manager(self):
         with Leap0Client(api_key="test-key") as client:
             assert client.sandboxes is not None
+
+    def test_otel_enabled_deprecation_shim(self):
+        with pytest.warns(DeprecationWarning, match="sdk_otel_enabled"):
+            client = Leap0Client(api_key="test-key", otel_enabled=False)
+
+        client.close()
+
+    def test_sdk_otel_enabled_wins_over_otel_enabled(self, monkeypatch):
+        calls: list[bool] = []
+
+        def fake_init_otel(self):
+            calls.append(True)
+
+        monkeypatch.setattr(Leap0Client, "_init_otel", fake_init_otel)
+
+        with pytest.warns(DeprecationWarning, match="sdk_otel_enabled"):
+            client = Leap0Client(api_key="test-key", otel_enabled=True, sdk_otel_enabled=False)
+
+        client.close()
+        assert calls == []

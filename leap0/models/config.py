@@ -22,6 +22,10 @@ DEFAULT_TIMEOUT_MIN = 5
 
 DEFAULT_CLIENT_TIMEOUT = 300.0
 
+OTEL_EXPORTER_OTLP_ENDPOINT_ENV = "OTEL_EXPORTER_OTLP_ENDPOINT"
+
+OTEL_EXPORTER_OTLP_HEADERS_ENV = "OTEL_EXPORTER_OTLP_HEADERS"
+
 def _resolve_env_str(value: str | None, env_var: str, default: str) -> str:
     resolved = value.strip() if value else None
     if not resolved:
@@ -66,9 +70,12 @@ class Leap0Config(BaseModel):
         self.api_key = api_key
         self.auth_header = auth_header
         if self.sdk_otel_enabled is None:
-            self.sdk_otel_enabled = os.environ.get("LEAP0_SDK_OTEL_ENABLED") == "true" or bool(
-                os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT")
-            )
+            sdk_otel_env = os.environ.get("LEAP0_SDK_OTEL_ENABLED")
+            sdk_otel_env = sdk_otel_env.strip() if sdk_otel_env is not None else None
+            if sdk_otel_env:
+                self.sdk_otel_enabled = sdk_otel_env.lower() == "true"
+            else:
+                self.sdk_otel_enabled = bool(os.environ.get(OTEL_EXPORTER_OTLP_ENDPOINT_ENV))
         self.base_url = _resolve_env_str(self.base_url, "LEAP0_BASE_URL", DEFAULT_BASE_URL)
         self.sandbox_domain = _resolve_env_str(
             self.sandbox_domain,

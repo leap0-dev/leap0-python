@@ -5,7 +5,14 @@ from functools import wraps
 from typing import Generic, Protocol, TypeVar, cast
 
 from .._internal.types import SandboxFactory
-from ..models.config import DEFAULT_MEMORY_MIB, DEFAULT_TEMPLATE_NAME, DEFAULT_TIMEOUT_MIN, DEFAULT_VCPU
+from ..models.config import (
+    DEFAULT_MEMORY_MIB,
+    DEFAULT_TEMPLATE_NAME,
+    DEFAULT_TIMEOUT_MIN,
+    DEFAULT_VCPU,
+    OTEL_EXPORTER_OTLP_ENDPOINT_ENV,
+    OTEL_EXPORTER_OTLP_HEADERS_ENV,
+)
 from ..models.sandbox import CreateSandboxParams, Sandbox as SandboxData, SandboxRef, SandboxStatus, sandbox_id_of
 from .._schemas.sandbox import NetworkPolicyDict, SandboxCreateResponseDict, SandboxStatusResponseDict
 from .._utils.errors import intercept_errors
@@ -14,8 +21,8 @@ from ._transport import Transport
 
 
 _OTEL_ENV_KEYS = (
-    "OTEL_EXPORTER_OTLP_ENDPOINT",
-    "OTEL_EXPORTER_OTLP_HEADERS",
+    OTEL_EXPORTER_OTLP_ENDPOINT_ENV,
+    OTEL_EXPORTER_OTLP_HEADERS_ENV,
 )
 
 SandboxT = TypeVar("SandboxT", SandboxData, SandboxStatus, "Sandbox")
@@ -137,12 +144,18 @@ class Sandbox:
 
 
 def _inject_otel_env(env_vars: dict[str, str] | None) -> dict[str, str] | None:
-    endpoint = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT")
+    endpoint = os.environ.get(OTEL_EXPORTER_OTLP_ENDPOINT_ENV)
     if not endpoint:
         raise ValueError(
-            "otel_export=True requires OTEL_EXPORTER_OTLP_ENDPOINT in the local environment"
+            f"otel_export=True requires {OTEL_EXPORTER_OTLP_ENDPOINT_ENV} in the local environment"
         )
-    otel = {k: v for k in _OTEL_ENV_KEYS if (v := os.environ.get(k))}
+    otel = {OTEL_EXPORTER_OTLP_ENDPOINT_ENV: endpoint}
+    for key in _OTEL_ENV_KEYS:
+        if key == OTEL_EXPORTER_OTLP_ENDPOINT_ENV:
+            continue
+        value = os.environ.get(key)
+        if value:
+            otel[key] = value
     merged = dict(otel)
     if env_vars:
         merged.update(env_vars)
@@ -184,7 +197,8 @@ class SandboxesClient(Generic[SandboxT]):
         memory_mib: int = DEFAULT_MEMORY_MIB,
         timeout_min: int = DEFAULT_TIMEOUT_MIN,
         auto_pause: bool = False,
-        otel_export: bool = False,
+        otel_export: bool | None = None,
+        telemetry: bool | None = None,
         env_vars: dict[str, str] | None = None,
         network_policy: NetworkPolicyDict | None = None,
         http_timeout: float | None = None,
@@ -200,6 +214,7 @@ class SandboxesClient(Generic[SandboxT]):
             otel_export: Inject OpenTelemetry exporter environment into the sandbox.
                 Requires ``OTEL_EXPORTER_OTLP_ENDPOINT`` in the local environment and
                 also forwards ``OTEL_EXPORTER_OTLP_HEADERS`` when present.
+            telemetry: Deprecated alias for ``otel_export``. Use ``otel_export`` instead.
             env_vars: Environment variables to set inside the sandbox.
             network_policy: Outbound network policy for the sandbox.
             http_timeout: Optional HTTP request timeout in seconds for this SDK call.
@@ -207,14 +222,16 @@ class SandboxesClient(Generic[SandboxT]):
         Returns:
             SandboxT | SandboxData | SandboxStatus: Created sandbox object.
         """
+        effective_otel_export = otel_export if otel_export is not None else bool(telemetry)
+
         params = CreateSandboxParams(
             template_name=template_name,
             vcpu=vcpu,
             memory_mib=memory_mib,
             timeout_min=timeout_min,
             auto_pause=auto_pause,
-            otel_export=otel_export,
-            env_vars=_inject_otel_env(env_vars) if otel_export else env_vars,
+            otel_export=effective_otel_export,
+            env_vars=_inject_otel_env(env_vars) if effective_otel_export else env_vars,
             network_policy=network_policy,
         )
         payload = params.to_payload()
