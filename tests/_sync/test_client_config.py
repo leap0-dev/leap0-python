@@ -21,6 +21,16 @@ def test_sdk_otel_enabled_can_be_disabled_explicitly(monkeypatch):
     assert config.sdk_otel_enabled is False
 
 
+def test_explicit_sdk_flag_precedence(monkeypatch):
+    monkeypatch.setenv("LEAP0_API_KEY", "test-key")
+    monkeypatch.setenv("LEAP0_SDK_OTEL_ENABLED", "false")
+    monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318")
+
+    config = Leap0Config()
+
+    assert config.sdk_otel_enabled is False
+
+
 def test_legacy_otel_env_no_longer_enables_sdk(monkeypatch):
     monkeypatch.setenv("LEAP0_API_KEY", "test-key")
     monkeypatch.setenv("LEAP0_OTEL_ENABLED", "true")

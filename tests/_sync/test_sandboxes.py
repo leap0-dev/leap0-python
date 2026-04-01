@@ -96,6 +96,33 @@ class TestSandboxesClient:
             "APP_ENV": "test",
         }
 
+    def test_create_accepts_legacy_telemetry_flag(self, mock_transport, monkeypatch):
+        monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://collector:4318")
+        mock_transport.request_json.return_value = {
+            "id": "sbx-1", "template_id": "tpl-1", "vcpu": 2, "memory_mib": 2048,
+            "disk_mib": 10240, "state": "starting", "auto_pause": False, "created_at": "",
+        }
+
+        SandboxesClient(mock_transport, sandbox_domain="s.dev").create(telemetry=True)
+
+        sent_env = mock_transport.request_json.call_args.kwargs["json"]["env_vars"]
+        assert sent_env == {"OTEL_EXPORTER_OTLP_ENDPOINT": "http://collector:4318"}
+
+    def test_create_prefers_otel_export_over_legacy_telemetry(self, mock_transport, monkeypatch):
+        mock_transport.request_json.return_value = {
+            "id": "sbx-1", "template_id": "tpl-1", "vcpu": 2, "memory_mib": 2048,
+            "disk_mib": 10240, "state": "starting", "auto_pause": False, "created_at": "",
+        }
+
+        SandboxesClient(mock_transport, sandbox_domain="s.dev").create(
+            otel_export=False,
+            telemetry=True,
+            env_vars={"APP_ENV": "test"},
+        )
+
+        sent_env = mock_transport.request_json.call_args.kwargs["json"]["env_vars"]
+        assert sent_env == {"APP_ENV": "test"}
+
     def test_create_rejects_otel_export_without_endpoint(self, mock_transport, monkeypatch):
         monkeypatch.delenv("OTEL_EXPORTER_OTLP_ENDPOINT", raising=False)
         monkeypatch.delenv("OTEL_EXPORTER_OTLP_HEADERS", raising=False)
