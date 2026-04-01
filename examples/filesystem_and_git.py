@@ -4,11 +4,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from leap0 import FileInfo, GitResult, Leap0, Leap0Config, Sandbox, TreeResult
+from leap0 import FileInfo, GitResult, Leap0Client, Sandbox, TreeResult
 
 
 def main() -> None:
-    client = Leap0(Leap0Config())
+    client = Leap0Client()
     sandbox: Sandbox = client.sandboxes.create()
     repo_path = "/workspace/hello-world"
 

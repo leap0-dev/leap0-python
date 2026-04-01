@@ -8,15 +8,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from leap0 import (
     DEFAULT_DESKTOP_TEMPLATE_NAME,
     DesktopDisplayInfo,
-    Leap0,
-    Leap0Config,
+    Leap0Client,
     Leap0Error,
     Sandbox,
 )
 
 
 def main() -> None:
-    client = Leap0(Leap0Config())
+    client = Leap0Client()
     sandbox: Sandbox | None = None
 
     try:

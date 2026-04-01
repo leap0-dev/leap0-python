@@ -4,11 +4,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from leap0 import CodeExecutionResult, Leap0, Leap0Config, Sandbox
+from leap0 import CodeExecutionResult, Leap0Client, Sandbox
 
 
 def main() -> None:
-    client = Leap0(Leap0Config())
+    client = Leap0Client()
     sandbox: Sandbox = client.sandboxes.create()
 
     try:

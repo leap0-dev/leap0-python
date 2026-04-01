@@ -44,9 +44,9 @@ client = Leap0Client(api_key="your-api-key")
 ## Quick Start
 
 ```python
-from leap0 import Leap0, Leap0Config
+from leap0 import Leap0Client
 
-client = Leap0(Leap0Config())
+client = Leap0Client()
 sandbox = client.sandboxes.create()
 
 try:
@@ -119,7 +119,7 @@ Execute one-shot shell commands inside a running sandbox.
 
 ```python
 result = sandbox.process.execute(command="ls -la /workspace")
-print(result.stdout)
+print(result.result)
 ```
 
 ### Interactive Terminal (PTY)
@@ -182,6 +182,7 @@ Save and restore sandbox state at any point.
 
 ```python
 snapshot = client.snapshots.create(sandbox, name="my-checkpoint")
+paused_snapshot = client.snapshots.pause(sandbox, name="paused-checkpoint")
 restored = client.snapshots.resume(snapshot_name="my-checkpoint")
 ```
 
@@ -215,7 +216,7 @@ The SDK is organized into service clients accessible from the top-level `Leap0Cl
 | Client | Description |
 |---|---|
 | `client.sandboxes` | Create, get, pause, and delete sandboxes |
-| `client.snapshots` | Create, pause, resume, and delete snapshots |
+| `client.snapshots` | Create snapshots, pause a sandbox into a snapshot, resume from a snapshot, and delete snapshots |
 | `client.templates` | Create, rename, and delete templates |
 | `client.filesystem` | File operations (read, write, edit, search, tree, etc.) |
 | `client.git` | Git operations (clone, commit, push, pull, branch, etc.) |
@@ -228,14 +229,19 @@ The SDK is organized into service clients accessible from the top-level `Leap0Cl
 
 ## Configuration
 
+For most cases, use `Leap0Client()` and let it read `LEAP0_API_KEY` from the environment.
+
+Use `Leap0Config` when you want a reusable validated config object:
+
 ```python
 from leap0 import Leap0, Leap0Config
 
-client = Leap0(Leap0Config(
-    api_key="your-api-key",        # or set LEAP0_API_KEY env var
+config = Leap0Config(
+    api_key="your-api-key",  # or set LEAP0_API_KEY env var
     base_url="https://api.leap0.dev",
     timeout=300,
-))
+)
+client = Leap0(config)
 ```
 
 | Option | Default | Description |

@@ -5,11 +5,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from leap0 import Leap0, Leap0Config, Sandbox, SshAccess, SshValidation
+from leap0 import Leap0Client, Sandbox, SshAccess, SshValidation
 
 
 def main() -> None:
-    client = Leap0(Leap0Config())
+    client = Leap0Client()
     sandbox: Sandbox = client.sandboxes.create()
 
     try:
