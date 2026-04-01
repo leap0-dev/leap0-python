@@ -687,6 +687,8 @@ class DesktopClient:
                 f"Desktop did not become ready within {timeout:.0f}s: {exc}"
             ) from exc
         except Leap0Error as exc:
-            raise Leap0TimeoutError(
-                f"Desktop did not become ready within {timeout:.0f}s: {exc}"
-            ) from exc
+            if exc.retryable:
+                raise Leap0TimeoutError(
+                    f"Desktop did not become ready within {timeout:.0f}s: {exc}"
+                ) from exc
+            raise

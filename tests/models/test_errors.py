@@ -3,7 +3,7 @@ from __future__ import annotations
 import httpx
 import pytest
 
-from leap0.models.errors import Leap0Error, Leap0NotFoundError, Leap0TimeoutError
+from leap0.models.errors import Leap0Error, Leap0NotFoundError, Leap0TimeoutError, raise_api_error
 from leap0._utils.errors import intercept_errors
 
 
@@ -88,3 +88,17 @@ class TestInterceptErrors:
             return 42
 
         assert ok() == 42
+
+
+class TestRaiseApiError:
+    def test_marks_rate_limits_retryable(self):
+        with pytest.raises(Leap0Error) as exc_info:
+            raise_api_error(429, "Too many requests")
+
+        assert exc_info.value.retryable is True
+
+    def test_marks_server_errors_retryable(self):
+        with pytest.raises(Leap0Error) as exc_info:
+            raise_api_error(503, "Service unavailable")
+
+        assert exc_info.value.retryable is True

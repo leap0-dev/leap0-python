@@ -106,4 +106,5 @@ def raise_api_error(
     still branch on it when needed.
     """
     cls = _STATUS_TO_EXCEPTION.get(status_code, Leap0Error)
-    raise cls(message, status_code, headers, body=body)
+    retryable = status_code == 429 or 500 <= status_code < 600
+    raise cls(message, status_code, headers, body=body, retryable=retryable)
