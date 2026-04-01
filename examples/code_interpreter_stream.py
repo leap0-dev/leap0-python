@@ -4,23 +4,23 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from leap0 import Leap0, Leap0Config
+from leap0 import Leap0, Leap0Config, Sandbox, StreamEvent
 
 
 def main() -> None:
     client = Leap0(Leap0Config())
-    sandbox = client.sandboxes.create()
+    sandbox: Sandbox = client.sandboxes.create()
 
     try:
-        for event in client.code_interpreter.execute_stream(
-            sandbox,
+        event: StreamEvent
+        for event in sandbox.code_interpreter.execute_stream(
             code="import time\nfor i in range(3):\n    print(f'step {i}')\n    time.sleep(1)",
             language="python",
             timeout_ms=10_000,
         ):
             print(event)
     finally:
-        client.sandboxes.delete(sandbox)
+        sandbox.delete()
         client.close()
 
 
