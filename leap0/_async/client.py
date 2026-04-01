@@ -1,17 +1,25 @@
 from __future__ import annotations
 
 import asyncio
+import threading
 from types import TracebackType
 
 from opentelemetry import metrics, trace
+from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk.metrics import MeterProvider
+from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.semconv.attributes import service_attributes
+from opentelemetry.trace import ProxyTracerProvider
+
+from opentelemetry.metrics import _internal as metrics_internal
+from opentelemetry.util._once import Once
 
 from .._internal.version import SDK_VERSION
+from .._utils.otel import clear_cached_otel
 from ..models.config import (
     DEFAULT_BASE_URL,
     DEFAULT_CLIENT_TIMEOUT,
@@ -37,6 +45,27 @@ from .sandbox import AsyncSandbox, AsyncSandboxesClient
 from .snapshots import AsyncSnapshotsClient
 from .ssh import AsyncSshClient
 from .templates import AsyncTemplatesClient
+
+
+_otel_lock = threading.Lock()
+_shared_tracer_provider: TracerProvider | None = None
+_shared_tracer_refcount = 0
+_shared_meter_provider: MeterProvider | None = None
+_shared_meter_refcount = 0
+
+
+def _reset_tracer_provider_if_current(provider: TracerProvider) -> None:
+    if trace.get_tracer_provider() is not provider:
+        return
+    trace._TRACER_PROVIDER = ProxyTracerProvider()  # type: ignore[attr-defined]
+    trace._TRACER_PROVIDER_SET_ONCE = Once()  # type: ignore[attr-defined]
+
+
+def _reset_meter_provider_if_current(provider: MeterProvider) -> None:
+    if metrics.get_meter_provider() is not provider:
+        return
+    metrics_internal._METER_PROVIDER = metrics_internal._PROXY_METER_PROVIDER  # type: ignore[attr-defined]
+    metrics_internal._METER_PROVIDER_SET_ONCE = Once()  # type: ignore[attr-defined]
 
 
 class AsyncLeap0Client:
@@ -113,8 +142,9 @@ class AsyncLeap0Client:
             auth_header=config.auth_header,
             bearer=config.bearer,
         )
-        self._owns_tracer_provider = False
-        self._owns_meter_provider = False
+        self._uses_shared_tracer_provider = False
+        self._uses_shared_meter_provider = False
+        self._closed = False
         self.sandboxes: AsyncSandboxesClient[AsyncSandbox] = AsyncSandboxesClient(
             self._transport,
             sandbox_domain=config.sandbox_domain,
@@ -138,30 +168,46 @@ class AsyncLeap0Client:
             self._init_otel()
 
     def _init_otel(self) -> None:
-        self._owns_tracer_provider = False
-        self._owns_meter_provider = False
         resource = Resource.create(
             {
                 service_attributes.SERVICE_NAME: "leap0-python-sdk",
                 service_attributes.SERVICE_VERSION: SDK_VERSION,
             }
         )
-        current_tracer_provider = trace.get_tracer_provider()
-        if not isinstance(current_tracer_provider, TracerProvider):
-            self._tracer_provider = TracerProvider(resource=resource)
-            self._tracer_provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter()))
-            trace.set_tracer_provider(self._tracer_provider)
-            self._owns_tracer_provider = True
-        else:
-            self._tracer_provider = current_tracer_provider
+        self._uses_shared_tracer_provider = False
+        self._uses_shared_meter_provider = False
 
+        global _shared_tracer_provider, _shared_tracer_refcount
+        current_tracer_provider = trace.get_tracer_provider()
+        with _otel_lock:
+            if _shared_tracer_provider is None and isinstance(current_tracer_provider, TracerProvider):
+                self._tracer_provider = current_tracer_provider
+            else:
+                if _shared_tracer_provider is None:
+                    tracer_provider = TracerProvider(resource=resource)
+                    tracer_provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter()))
+                    _shared_tracer_provider = tracer_provider
+                    trace.set_tracer_provider(tracer_provider)
+                    clear_cached_otel()
+                _shared_tracer_refcount += 1
+                self._tracer_provider = _shared_tracer_provider
+                self._uses_shared_tracer_provider = True
+
+        global _shared_meter_provider, _shared_meter_refcount
         current_meter_provider = metrics.get_meter_provider()
-        if not isinstance(current_meter_provider, MeterProvider):
-            self._meter_provider = MeterProvider(resource=resource)
-            metrics.set_meter_provider(self._meter_provider)
-            self._owns_meter_provider = True
-        else:
-            self._meter_provider = current_meter_provider
+        with _otel_lock:
+            if _shared_meter_provider is None and isinstance(current_meter_provider, MeterProvider):
+                self._meter_provider = current_meter_provider
+            else:
+                if _shared_meter_provider is None:
+                    metric_reader = PeriodicExportingMetricReader(OTLPMetricExporter())
+                    meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
+                    _shared_meter_provider = meter_provider
+                    metrics.set_meter_provider(meter_provider)
+                    clear_cached_otel()
+                _shared_meter_refcount += 1
+                self._meter_provider = _shared_meter_provider
+                self._uses_shared_meter_provider = True
 
     @with_instrumentation("async_client.get_sandbox")
     async def get_sandbox(self, sandbox_id: str) -> AsyncSandbox:
@@ -190,11 +236,36 @@ class AsyncLeap0Client:
     @with_instrumentation("async_client.close")
     async def close(self) -> None:
         """Close the client and release resources."""
+        if self._closed:
+            return
+        self._closed = True
         await self._transport.close()
-        if self._owns_tracer_provider and self._tracer_provider is not None:
-            await asyncio.to_thread(self._tracer_provider.shutdown)
-        if self._owns_meter_provider and self._meter_provider is not None:
-            await asyncio.to_thread(self._meter_provider.shutdown)
+
+        tracer_to_shutdown: TracerProvider | None = None
+        meter_to_shutdown: MeterProvider | None = None
+
+        global _shared_tracer_provider, _shared_tracer_refcount
+        global _shared_meter_provider, _shared_meter_refcount
+        with _otel_lock:
+            if self._uses_shared_tracer_provider and self._tracer_provider is _shared_tracer_provider:
+                _shared_tracer_refcount -= 1
+                if _shared_tracer_refcount == 0 and _shared_tracer_provider is not None:
+                    tracer_to_shutdown = _shared_tracer_provider
+                    _reset_tracer_provider_if_current(_shared_tracer_provider)
+                    _shared_tracer_provider = None
+                    clear_cached_otel()
+            if self._uses_shared_meter_provider and self._meter_provider is _shared_meter_provider:
+                _shared_meter_refcount -= 1
+                if _shared_meter_refcount == 0 and _shared_meter_provider is not None:
+                    meter_to_shutdown = _shared_meter_provider
+                    _reset_meter_provider_if_current(_shared_meter_provider)
+                    _shared_meter_provider = None
+                    clear_cached_otel()
+
+        if tracer_to_shutdown is not None:
+            await asyncio.to_thread(tracer_to_shutdown.shutdown)
+        if meter_to_shutdown is not None:
+            await asyncio.to_thread(meter_to_shutdown.shutdown)
 
     async def __aenter__(self) -> AsyncLeap0Client:
         return self

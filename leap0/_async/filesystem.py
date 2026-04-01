@@ -25,7 +25,7 @@ class AsyncFilesystemClient:
         self._transport = transport
 
     @intercept_errors("Failed to list directory: ")
-    async def ls(self, sandbox: SandboxRef, *, path: str, recursive: bool = False, exclude: list[str] | None = None) -> LsResult:
+    async def ls(self, sandbox: SandboxRef, *, path: str, recursive: bool = False, exclude: list[str] | None = None, http_timeout: float | None = None) -> LsResult:
         """List directory entries.
         
                 Args:
@@ -33,6 +33,7 @@ class AsyncFilesystemClient:
                     path: Directory path to list.
                     recursive: List recursively.
                     exclude: Glob patterns to exclude.
+                    http_timeout: Optional HTTP request timeout in seconds for this SDK call.
         
         Returns:
             object: Result returned by this operation.
@@ -40,21 +41,22 @@ class AsyncFilesystemClient:
         payload: JsonObject = {"path": path, "recursive": recursive}
         if exclude is not None:
             payload["exclude"] = exclude
-        data = cast(LsResponseDict, await self._transport.request_json("POST", f"/v1/sandbox/{sandbox_id_of(sandbox)}/filesystem/ls", json=payload))
+        data = cast(LsResponseDict, await self._transport.request_json("POST", f"/v1/sandbox/{sandbox_id_of(sandbox)}/filesystem/ls", json=payload, timeout=http_timeout))
         return LsResult.from_dict(data)
 
     @intercept_errors("Failed to stat file: ")
-    async def stat(self, sandbox: SandboxRef, *, path: str) -> FileInfo:
+    async def stat(self, sandbox: SandboxRef, *, path: str, http_timeout: float | None = None) -> FileInfo:
         """Get metadata for a single path.
         
         Args:
             sandbox: Sandbox ID or object.
             path: Path used by this operation.
+            http_timeout: Optional HTTP request timeout in seconds for this SDK call.
         
         Returns:
             object: Result returned by this operation.
         """
-        data = cast(FileInfoDict, await self._transport.request_json("POST", f"/v1/sandbox/{sandbox_id_of(sandbox)}/filesystem/stat", json={"path": path}))
+        data = cast(FileInfoDict, await self._transport.request_json("POST", f"/v1/sandbox/{sandbox_id_of(sandbox)}/filesystem/stat", json={"path": path}, timeout=http_timeout))
         return FileInfo.from_dict(data)
 
     @intercept_errors("Failed to create directory: ")
@@ -92,7 +94,7 @@ class AsyncFilesystemClient:
             http_timeout: Optional HTTP request timeout in seconds for this SDK call.
         Example:
             ```python
-            client.filesystem.write_bytes(
+            await client.filesystem.write_bytes(
                 sandbox,
                 path="/workspace/logo.png",
                 content=image_bytes,
@@ -126,7 +128,7 @@ class AsyncFilesystemClient:
             http_timeout: Optional HTTP request timeout in seconds for this SDK call.
         Example:
             ```python
-            client.filesystem.write_file(
+            await client.filesystem.write_file(
                 sandbox,
                 path="/workspace/app.py",
                 content="print('hello')\n",
@@ -152,7 +154,7 @@ class AsyncFilesystemClient:
             http_timeout: Optional HTTP request timeout in seconds for this SDK call.
         Example:
             ```python
-            client.filesystem.write_files_bytes(
+            await client.filesystem.write_files_bytes(
                 sandbox,
                 files={"/workspace/a.bin": b"a", "/workspace/b.bin": b"b"},
             )
@@ -214,6 +216,8 @@ class AsyncFilesystemClient:
             print(content)
             ```
         """
+        if head is not None and tail is not None:
+            raise ValueError("`head` and `tail` are mutually exclusive")
         payload: JsonObject = {"path": path}
         if offset is not None:
             payload["offset"] = offset
@@ -523,10 +527,9 @@ def _parse_multipart_response(content_type: str, body: bytes) -> dict[str, bytes
 
     result: dict[str, bytes] = {}
     if not msg.is_multipart():
-        body_preview = body[:200] if len(body) > 200 else body
         raise ValueError(
             f"Expected multipart response but got content_type={content_type!r} "
-            f"(body length={len(body)}, preview={body_preview!r})"
+            f"(body length={len(body)}, preview='<redacted>')"
         )
     for part in msg.get_payload():  # type: ignore[union-attr]
         name = part.get_param("name", header="content-disposition")

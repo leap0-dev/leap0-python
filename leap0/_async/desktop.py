@@ -605,7 +605,12 @@ class AsyncDesktopClient:
                 raise Leap0TimeoutError(f"Desktop did not become ready within {timeout:.0f}s: {exc}") from exc
             except Leap0Error as exc:
                 last_error = exc
-                await asyncio.sleep(delay)
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise Leap0TimeoutError(
+                        f"Desktop did not become ready within {timeout:.0f}s: {exc}"
+                    ) from exc
+                await asyncio.sleep(min(delay, remaining))
                 delay = min(delay * 2, 5.0)
         if last_error is not None:
             raise Leap0TimeoutError(f"Desktop did not become ready within {timeout:.0f}s: {last_error}") from last_error

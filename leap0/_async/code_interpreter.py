@@ -14,6 +14,7 @@ from ..models.code_interpreter import (
     StreamEvent,
     StreamEventDict,
 )
+from ..models.errors import Leap0Error
 from ..models.sandbox import SandboxRef, sandbox_id_of
 from .._utils.errors import intercept_errors
 from .._utils.stream import aiter_sse_events
@@ -30,6 +31,14 @@ class AsyncCodeInterpreterClient:
     def __init__(self, transport: AsyncTransport, *, sandbox_domain: str | None = None):
         self._transport = transport
         self._sandbox_domain = sandbox_domain.strip("/") if sandbox_domain else None
+
+    def _stream_event_from_sse(self, event: object) -> StreamEvent | None:
+        if not isinstance(event, dict):
+            return None
+        if event.get("envelope") == "error":
+            message = str(event.get("error") or event.get("message") or "Code execution stream error")
+            raise Leap0Error(message, body=str(event))
+        return StreamEvent.from_dict(cast(StreamEventDict, event))
 
     async def _request(
         self,
@@ -214,7 +223,9 @@ class AsyncCodeInterpreterClient:
         )
         try:
             async for event in aiter_sse_events(response.aiter_lines()):
-                yield StreamEvent.from_dict(cast(StreamEventDict, event))
+                stream_event = self._stream_event_from_sse(event)
+                if stream_event is not None:
+                    yield stream_event
         finally:
             await response.aclose()
 

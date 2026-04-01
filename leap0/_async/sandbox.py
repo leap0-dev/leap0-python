@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import os
 from functools import wraps
 from typing import TYPE_CHECKING, Generic, Protocol, TypeVar, cast
@@ -33,6 +34,12 @@ class _AsyncSandboxServiceProxy:
         attr = getattr(self._service, name)
         if not callable(attr):
             return attr
+        if not inspect.iscoroutinefunction(attr):
+            @wraps(attr)
+            def sync_bound(*args: object, **kwargs: object) -> object:
+                return attr(self._sandbox, *args, **kwargs)
+
+            return sync_bound
 
         bound_attr = cast(_AsyncBoundSandboxCallable, attr)
 

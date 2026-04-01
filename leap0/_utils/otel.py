@@ -84,6 +84,15 @@ def get_meter() -> _MeterProtocol:
     return cast(_MeterProtocol, _meter)
 
 
+def clear_cached_otel() -> None:
+    """Clear cached tracer, meter, and histogram handles."""
+    global _tracer, _meter
+    _tracer = None
+    _meter = None
+    with _histograms_lock:
+        _histograms.clear()
+
+
 def _metric_name(name: str) -> str:
     return name.replace(".", "_").lower()
 

@@ -98,6 +98,14 @@ class Transport:
     def _expected(self, expected_status: int | tuple[int, ...]) -> tuple[int, ...]:
         return (expected_status,) if isinstance(expected_status, int) else expected_status
 
+    def _effective_timeout(self, timeout: float | None) -> float:
+        override = self._timeout_override.get()
+        if timeout is not None:
+            return timeout
+        if override is not None:
+            return override
+        return self.timeout
+
     def _target_url(self, target: str) -> str:
         if target.startswith("https://") or target.startswith("http://"):
             return target
@@ -137,7 +145,7 @@ class Transport:
             content=content,
             files=files,
             headers=self.headers(headers),
-            timeout=timeout or self._timeout_override.get() or self.timeout,
+            timeout=self._effective_timeout(timeout),
         )
         return self._check_response(response, method, target, expected_status)
 
@@ -150,7 +158,7 @@ class Transport:
         json: JsonObject | None = None,
         timeout: float | None = None,
     ) -> httpx.Response:
-        effective = timeout if timeout is not None else (self._timeout_override.get() or self.timeout)
+        effective = self._effective_timeout(timeout)
         request = self._client.build_request(
             method,
             self._target_url(target),
@@ -206,7 +214,7 @@ class Transport:
             content=content,
             files=files,
             headers=actual_headers,
-            timeout=timeout or self._timeout_override.get() or self.timeout,
+            timeout=self._effective_timeout(timeout),
         )
         return self._check_response(response, method, path, expected_status)
 

@@ -9,6 +9,7 @@ from .._internal.types import JsonObject
 from ..models.code_interpreter import (
     CodeContext, CodeContextDict, CodeExecutionResult, CodeExecutionResultDict, StreamEvent, StreamEventDict,
 )
+from ..models.errors import Leap0Error
 from ..models.sandbox import SandboxRef, sandbox_id_of
 from .._utils.errors import intercept_errors
 from .._utils.stream import iter_sse_events
@@ -39,6 +40,14 @@ class CodeInterpreterClient:
     def __init__(self, transport: Transport, *, sandbox_domain: str | None = None):
         self._transport = transport
         self._sandbox_domain = sandbox_domain.strip("/") if sandbox_domain else None
+
+    def _stream_event_from_sse(self, event: object) -> StreamEvent | None:
+        if not isinstance(event, dict):
+            return None
+        if event.get("envelope") == "error":
+            message = str(event.get("error") or event.get("message") or "Code execution stream error")
+            raise Leap0Error(message, body=str(event))
+        return StreamEvent.from_dict(cast(StreamEventDict, event))
 
     def _request(
         self,
@@ -264,6 +273,8 @@ class CodeInterpreterClient:
         )
         try:
             for event in iter_sse_events(response.iter_lines()):
-                yield StreamEvent.from_dict(cast(StreamEventDict, event))
+                stream_event = self._stream_event_from_sse(event)
+                if stream_event is not None:
+                    yield stream_event
         finally:
             response.close()
