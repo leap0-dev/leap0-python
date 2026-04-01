@@ -4,8 +4,9 @@ from dataclasses import dataclass
 from typing import Protocol
 
 from pydantic import BaseModel, ConfigDict, model_validator
-from .sandbox import NetworkPolicyDict, NetworkPolicyMode, SandboxState, _parse_sandbox_state
+
 from .._schemas.snapshot import SnapshotCreateResponseDict
+from .sandbox import NetworkPolicyDict, NetworkPolicyMode, SandboxState, _parse_sandbox_state
 
 class CreateSnapshotParams(BaseModel):
     """Validated snapshot creation parameters."""

@@ -40,6 +40,27 @@ class CreatePtySessionParams(BaseModel):
             payload["id"] = session_id
         return payload
 
+
+class PtyResizeParams(BaseModel):
+    """Validated PTY resize parameters."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    cols: int
+    rows: int
+
+    @model_validator(mode="after")
+    def _validate_values(self) -> PtyResizeParams:
+        if self.cols < 1:
+            raise ValueError("cols must be at least 1")
+        if self.rows < 1:
+            raise ValueError("rows must be at least 1")
+        return self
+
+    def to_payload(self) -> dict[str, object]:
+        """Convert this object to an API request payload."""
+        return self.model_dump()
+
 @dataclass(slots=True)
 class PtySession:
     """PTY session metadata."""

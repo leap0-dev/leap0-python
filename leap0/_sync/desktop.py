@@ -2,17 +2,12 @@ from __future__ import annotations
 
 import time
 from collections.abc import Iterator
-from typing import Any, cast
+from typing import cast
 
 import httpx
 from tenacity import retry, retry_if_exception, stop_after_delay, wait_exponential
 
 from .._internal.types import JsonObject
-from ._transport import Transport
-from .._utils.errors import intercept_errors
-from .._utils.stream import iter_sse_events
-from .._utils.url import sandbox_base_url
-from ..models.errors import Leap0Error, Leap0TimeoutError
 from ..models.desktop import (
     DesktopDisplayInfo,
     DesktopDisplayInfoDict,
@@ -38,6 +33,11 @@ from ..models.desktop import (
     DesktopWindowsDict,
 )
 from ..models.sandbox import SandboxRef, sandbox_id_of
+from ..models.errors import Leap0Error, Leap0TimeoutError
+from .._utils.errors import intercept_errors
+from .._utils.stream import iter_sse_events
+from .._utils.url import sandbox_base_url
+from ._transport import Transport
 
 
 class DesktopClient:
@@ -583,11 +583,22 @@ class DesktopClient:
             object: Items yielded by this operation.
         """
         url = f"{sandbox_base_url(sandbox_id_of(sandbox), self._sandbox_domain)}/api/status/stream"
-        response = self._transport.stream("GET", url, timeout=http_timeout)
+        stream_timeout = http_timeout
+        if deadline is not None:
+            remaining_time = deadline - time.monotonic()
+            if remaining_time <= 0:
+                raise Leap0TimeoutError("Desktop status stream timed out")
+            stream_timeout = remaining_time if stream_timeout is None else min(stream_timeout, remaining_time)
+        response = self._transport.stream("GET", url, timeout=stream_timeout)
         try:
-            for event in iter_sse_events(response.iter_lines()):
+            events = iter_sse_events(response.iter_lines())
+            while True:
                 if deadline is not None and time.monotonic() >= deadline:
                     raise Leap0TimeoutError("Desktop status stream timed out")
+                try:
+                    event = next(events)
+                except StopIteration:
+                    break
                 # Non-dict events are heartbeat/info frames; skip them.
                 if not isinstance(event, dict):
                     continue
@@ -648,8 +659,4 @@ class DesktopClient:
         except Leap0Error as exc:
             raise Leap0TimeoutError(
                 f"Desktop did not become ready within {timeout:.0f}s: {exc}"
-            ) from exc
-        except Exception as exc:
-            raise Leap0TimeoutError(
-                f"Desktop did not become ready within {timeout:.0f}s"
             ) from exc

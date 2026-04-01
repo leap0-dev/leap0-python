@@ -4,13 +4,13 @@ import os
 from functools import wraps
 from typing import Generic, Protocol, TypeVar, cast
 
-from ._transport import Transport
-from .._utils.errors import intercept_errors
-from .._utils.url import ensure_leading_slash, sandbox_base_url, websocket_url_from_http
 from .._internal.types import SandboxFactory
 from ..models.config import DEFAULT_MEMORY_MIB, DEFAULT_TEMPLATE_NAME, DEFAULT_TIMEOUT_MIN, DEFAULT_VCPU
 from ..models.sandbox import CreateSandboxParams, Sandbox as SandboxData, SandboxRef, SandboxStatus, sandbox_id_of
 from .._schemas.sandbox import NetworkPolicyDict, SandboxCreateResponseDict, SandboxStatusResponseDict
+from .._utils.errors import intercept_errors
+from .._utils.url import ensure_leading_slash, sandbox_base_url, websocket_url_from_http
+from ._transport import Transport
 
 
 _OTEL_ENV_KEYS = (
@@ -55,7 +55,6 @@ class Sandbox:
 
     Attributes:
         filesystem: Bound filesystem client.
-        fs: Alias for ``filesystem``.
         git: Bound git client.
         process: Bound process client.
         pty: Bound PTY client.
@@ -69,7 +68,6 @@ class Sandbox:
         self._client = client
         self._data: SandboxData | SandboxStatus = data
         self.filesystem = _SandboxServiceProxy(client.filesystem, self)
-        self.fs = self.filesystem
         self.git = _SandboxServiceProxy(client.git, self)
         self.process = _SandboxServiceProxy(client.process, self)
         self.pty = _SandboxServiceProxy(client.pty, self)

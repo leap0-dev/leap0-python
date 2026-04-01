@@ -3,11 +3,11 @@ from __future__ import annotations
 from typing import Any, cast
 
 from .._internal.types import JsonObject
-from ._transport import AsyncTransport
-from .._utils.errors import intercept_errors
 from ..models.filesystem import EditFileResult, EditResult, FileEdit, FileInfo, LsResult, SearchMatch, TreeResult
-from .._schemas.filesystem import EditFileResponseDict, EditFilesResponseDict, ExistsResponseDict, FileInfoDict, GlobResponseDict, GrepResponseDict, LsResponseDict, TreeResponseDict
 from ..models.sandbox import SandboxRef, sandbox_id_of
+from .._schemas.filesystem import EditFileResponseDict, EditFilesResponseDict, ExistsResponseDict, FileInfoDict, GlobResponseDict, GrepResponseDict, LsResponseDict, TreeResponseDict
+from .._utils.errors import intercept_errors
+from ._transport import AsyncTransport
 
 
 class AsyncFilesystemClient:
@@ -203,30 +203,16 @@ class AsyncFilesystemClient:
             limit: Maximum bytes to read.
             head: Return only the first N lines (mutually exclusive with *tail*).
             tail: Return only the last N lines (mutually exclusive with *head*).
-
             http_timeout: Optional HTTP request timeout in seconds for this SDK call.
-
-        Args:
-            sandbox: Sandbox ID or object.
-            path: Path to the file.
-            offset: Byte offset to start from.
-            limit: Maximum bytes to read.
-            head: Return only the first N lines.
-            tail: Return only the last N lines.
-            encoding: Text encoding used to decode the response body.
-
-            http_timeout: Optional HTTP request timeout in seconds for this SDK call.
-        Returns:
-            str: Decoded file contents.
-
-        Example:
-            ```python
-            content = sandbox.filesystem.read_file(path="/workspace/README.md")
-            print(content)
-            ```
 
         Returns:
             bytes: File contents as raw bytes.
+
+        Example:
+            ```python
+            content = await sandbox.filesystem.read_bytes(path="/workspace/logo.png")
+            print(content)
+            ```
         """
         payload: JsonObject = {"path": path}
         if offset is not None:
@@ -450,7 +436,7 @@ class AsyncFilesystemClient:
         return [EditResult.from_dict(item) for item in data.get("items", [])]
 
     @intercept_errors("Failed to move: ")
-    async def move(self, sandbox: SandboxRef, *, src_path: str, dst_path: str, overwrite: bool = False) -> None:
+    async def move(self, sandbox: SandboxRef, *, src_path: str, dst_path: str, overwrite: bool = False, http_timeout: float | None = None) -> None:
         """Move or rename a file or directory.
         
         Args:
@@ -464,6 +450,7 @@ class AsyncFilesystemClient:
             f"/v1/sandbox/{sandbox_id_of(sandbox)}/filesystem/move",
             json={"src_path": src_path, "dst_path": dst_path, "overwrite": overwrite},
             expected_status=204,
+            timeout=http_timeout,
         )
 
     @intercept_errors("Failed to copy: ")

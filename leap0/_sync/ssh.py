@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from typing import cast
 
-from ._transport import Transport
-from .._utils.errors import intercept_errors
 from ..models.sandbox import SandboxRef, sandbox_id_of
 from ..models.ssh import SshAccess, SshValidation
+from .._utils.errors import intercept_errors
+from ._transport import Transport
 
 
 class SshClient:

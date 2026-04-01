@@ -1,17 +1,18 @@
 from __future__ import annotations
 
+import warnings
 from urllib.parse import quote
 from typing import Any, cast
 
 from websockets.asyncio.client import ClientConnection, connect
 
 from .._internal.types import JsonObject
-from ._transport import AsyncTransport
+from ..models.pty import CreatePtySessionParams, PtyResizeParams, PtySession
+from ..models.sandbox import SandboxRef, sandbox_id_of
+from .._schemas.pty import PtyListResponseDict, PtySessionInfoDict
 from .._utils.errors import intercept_errors
 from .._utils.url import websocket_url_from_http
-from ..models.pty import CreatePtySessionParams, PtySession
-from .._schemas.pty import PtyListResponseDict, PtySessionInfoDict
-from ..models.sandbox import SandboxRef, sandbox_id_of
+from ._transport import AsyncTransport
 
 
 class AsyncPtyConnection:
@@ -157,7 +158,7 @@ class AsyncPtyClient:
         Returns:
             object: Result returned by this operation.
         """
-        payload = CreatePtySessionParams(cols=cols, rows=rows).to_payload()
+        payload = PtyResizeParams(cols=cols, rows=rows).to_payload()
         encoded_session_id = quote(session_id, safe="")
         data = cast(PtySessionInfoDict, await self._transport.request_json(
             "POST",
@@ -180,7 +181,14 @@ class AsyncPtyClient:
         return websocket_url_from_http(f"{self._transport.base_url}/v1/sandbox/{sandbox_id_of(sandbox)}/pty/{encoded_session_id}/connect")
 
     @intercept_errors("Failed to connect to PTY session: ")
-    async def connect(self, sandbox: SandboxRef, session_id: str, http_timeout: float | None = None, **kwargs: Any) -> AsyncPtyConnection:
+    async def connect(
+        self,
+        sandbox: SandboxRef,
+        session_id: str,
+        open_timeout: float | None = None,
+        http_timeout: float | None = None,
+        **kwargs: Any,
+    ) -> AsyncPtyConnection:
         """Open a WebSocket connection for interactive terminal I/O.
 
         Important:
@@ -190,15 +198,25 @@ class AsyncPtyClient:
         Args:
             sandbox: Sandbox ID or object.
             session_id: PTY session identifier.
-            http_timeout: Optional WebSocket open timeout in seconds.
+            open_timeout: Optional WebSocket open timeout in seconds.
+            http_timeout: Deprecated alias for ``open_timeout``.
             **kwargs: Additional keyword arguments passed to ``websockets.asyncio.client.connect``.
 
         Returns:
             AsyncPtyConnection: Open WebSocket-backed PTY connection.
         """
         url = self.websocket_url(sandbox, session_id)
-        if http_timeout is not None and "open_timeout" not in kwargs:
-            kwargs["open_timeout"] = http_timeout
+        if http_timeout is not None:
+            warnings.warn(
+                "http_timeout is deprecated for AsyncPtyClient.connect(); use open_timeout instead",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            if open_timeout is not None and open_timeout != http_timeout:
+                raise ValueError("Received conflicting values for open_timeout and deprecated http_timeout")
+            open_timeout = http_timeout
+        if open_timeout is not None and "open_timeout" not in kwargs:
+            kwargs["open_timeout"] = open_timeout
         additional_headers = dict(kwargs.pop("additional_headers", {}) or {})
         additional_headers[self._transport.auth_header] = self._transport.auth_value
         websocket = await connect(url, additional_headers=additional_headers, **kwargs)

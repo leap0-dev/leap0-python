@@ -3,11 +3,11 @@ from __future__ import annotations
 from typing import cast
 
 from .._internal.types import JsonObject
-from ._transport import AsyncTransport
-from .._utils.errors import intercept_errors
 from ..models.git import GitCommitResult, GitResult
-from .._schemas.git import GitCommitResponseDict, GitResultDict
 from ..models.sandbox import SandboxRef, sandbox_id_of
+from .._schemas.git import GitCommitResponseDict, GitResultDict
+from .._utils.errors import intercept_errors
+from ._transport import AsyncTransport
 
 
 class AsyncGitClient:

@@ -3,12 +3,12 @@ from __future__ import annotations
 from typing import cast
 
 from .._internal.types import JsonObject
-from ._transport import Transport
+from ..models.lsp import LspJsonRpcResponse, LspResponse
+from ..models.sandbox import SandboxRef, sandbox_id_of
+from .._schemas.lsp import LspJsonRpcResponseDict, LspSuccessResponseDict
 from .._utils.errors import intercept_errors
 from .._utils.url import file_uri as _file_uri
-from ..models.lsp import LspJsonRpcResponse, LspResponse
-from .._schemas.lsp import LspJsonRpcResponseDict, LspSuccessResponseDict
-from ..models.sandbox import SandboxRef, sandbox_id_of
+from ._transport import Transport
 
 
 class LspClient:
@@ -39,15 +39,6 @@ class LspClient:
             sandbox: Sandbox ID or object.
             language_id: Language identifier (``"python"``, ``"typescript"``, or ``"javascript"``).
             path_to_project: Project directory path inside the sandbox.
-
-        Args:
-            sandbox: Sandbox ID or object.
-            language_id: Language identifier.
-            path_to_project: Project directory path.
-            uri: Document URI (e.g. ``"file:///home/user/project/main.py"``).
-            text: Full document text.
-            version: Document version number.
-            http_timeout: Optional HTTP request timeout in seconds for this SDK call.
 
         Returns:
             LspResponse: Server startup result.
@@ -123,10 +114,15 @@ class LspClient:
         version: int = 1,
         http_timeout: float | None = None,
     ) -> None:
-        """
-            Like :meth:`did_open` but accepts a file path instead of a URI.
+        """Like :meth:`did_open` but accepts a file path instead of a URI.
 
-            Args:
+        Args:
+            sandbox: Sandbox ID or object.
+            language_id: Language identifier for the LSP operation.
+            path_to_project: Project path inside the sandbox.
+            path: File path inside the sandbox.
+            text: Optional full document text to send with the open notification.
+            version: Document version number.
             http_timeout: Optional HTTP request timeout in seconds for this SDK call.
         """
         self.did_open(sandbox, language_id=language_id, path_to_project=path_to_project, uri=_file_uri(path), text=text, version=version, http_timeout=http_timeout)

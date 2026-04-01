@@ -2,17 +2,20 @@ from __future__ import annotations
 
 import os
 from functools import wraps
-from typing import Generic, Protocol, TypeVar, cast
+from typing import TYPE_CHECKING, Generic, Protocol, TypeVar, cast
 
-from ._transport import AsyncTransport
 from .._internal.types import SandboxFactory
-from .._utils.errors import intercept_errors
-from .._utils.url import ensure_leading_slash, sandbox_base_url, websocket_url_from_http
 from ..models.config import DEFAULT_MEMORY_MIB, DEFAULT_TEMPLATE_NAME, DEFAULT_TIMEOUT_MIN, DEFAULT_VCPU
 from ..models.sandbox import CreateSandboxParams, Sandbox as SandboxData, SandboxRef, SandboxStatus, sandbox_id_of
 from .._schemas.sandbox import NetworkPolicyDict, SandboxCreateResponseDict, SandboxStatusResponseDict
+from .._utils.errors import intercept_errors
+from .._utils.url import ensure_leading_slash, sandbox_base_url, websocket_url_from_http
+from ._transport import AsyncTransport
 
 AsyncSandboxT = TypeVar("AsyncSandboxT", SandboxData, SandboxStatus, "AsyncSandbox")
+
+if TYPE_CHECKING:
+    from .client import AsyncLeap0Client
 
 
 _OTEL_ENV_KEYS = (
@@ -49,7 +52,6 @@ class AsyncSandbox:
 
     Attributes:
         filesystem: Bound filesystem client.
-        fs: Alias for ``filesystem``.
         git: Bound git client.
         process: Bound process client.
         pty: Bound PTY client.
@@ -58,11 +60,10 @@ class AsyncSandbox:
         code_interpreter: Bound code interpreter client.
         desktop: Bound desktop client.
     """
-    def __init__(self, client: object, data: SandboxData | SandboxStatus):
-        self._client = client
+    def __init__(self, client: "AsyncLeap0Client", data: SandboxData | SandboxStatus):
+        self._client: "AsyncLeap0Client" = client
         self._data: SandboxData | SandboxStatus = data
         self.filesystem = _AsyncSandboxServiceProxy(client.filesystem, self)
-        self.fs = self.filesystem
         self.git = _AsyncSandboxServiceProxy(client.git, self)
         self.process = _AsyncSandboxServiceProxy(client.process, self)
         self.pty = _AsyncSandboxServiceProxy(client.pty, self)

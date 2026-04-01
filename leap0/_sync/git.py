@@ -3,11 +3,11 @@ from __future__ import annotations
 from typing import cast
 
 from .._internal.types import JsonObject
-from ._transport import Transport
-from .._utils.errors import intercept_errors
 from ..models.git import GitCommitResult, GitResult
-from .._schemas.git import GitCommitResponseDict, GitResultDict
 from ..models.sandbox import SandboxRef, sandbox_id_of
+from .._schemas.git import GitCommitResponseDict, GitResultDict
+from .._utils.errors import intercept_errors
+from ._transport import Transport
 
 
 class GitClient:
@@ -165,7 +165,7 @@ class GitClient:
         return self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/diff", payload, http_timeout=http_timeout)
 
     @intercept_errors("Failed to reset: ")
-    def reset(self, sandbox: SandboxRef, *, path: str) -> GitResult:
+    def reset(self, sandbox: SandboxRef, *, path: str, http_timeout: float | None = None) -> GitResult:
         """Unstage all currently staged changes.
         
         Args:
@@ -175,7 +175,7 @@ class GitClient:
         Returns:
             object: Result returned by this operation.
         """
-        return self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/reset", {"path": path})
+        return self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/reset", {"path": path}, http_timeout=http_timeout)
 
     @intercept_errors("Failed to get git log: ")
     def log(
@@ -211,7 +211,7 @@ class GitClient:
         return self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/log", payload, http_timeout=http_timeout)
 
     @intercept_errors("Failed to show revision: ")
-    def show(self, sandbox: SandboxRef, *, path: str, revision: str = "HEAD") -> GitResult:
+    def show(self, sandbox: SandboxRef, *, path: str, revision: str = "HEAD", http_timeout: float | None = None) -> GitResult:
         """Show the full output for a commit, branch, or tag revision.
         
         Args:
@@ -222,7 +222,7 @@ class GitClient:
         Returns:
             object: Result returned by this operation.
         """
-        return self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/show", {"path": path, "revision": revision})
+        return self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/show", {"path": path, "revision": revision}, http_timeout=http_timeout)
 
     @intercept_errors("Failed to create branch: ")
     def create_branch(
@@ -272,7 +272,7 @@ class GitClient:
         return self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/checkout-branch", payload, http_timeout=http_timeout)
 
     @intercept_errors("Failed to delete branch: ")
-    def delete_branch(self, sandbox: SandboxRef, *, path: str, name: str, force: bool = False) -> GitResult:
+    def delete_branch(self, sandbox: SandboxRef, *, path: str, name: str, force: bool = False, http_timeout: float | None = None) -> GitResult:
         """Delete a branch. Set *force* to delete even if unmerged.
         
         Args:
@@ -284,7 +284,7 @@ class GitClient:
         Returns:
             object: Result returned by this operation.
         """
-        return self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/delete-branch", {"path": path, "name": name, "force": force})
+        return self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/delete-branch", {"path": path, "name": name, "force": force}, http_timeout=http_timeout)
 
     @intercept_errors("Failed to stage files: ")
     def add(self, sandbox: SandboxRef, *, path: str, files: list[str], http_timeout: float | None = None) -> GitResult:
