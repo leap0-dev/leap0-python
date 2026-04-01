@@ -45,6 +45,16 @@ class TestInterceptErrors:
         with pytest.raises(Leap0Error) as exc_info:
             failing()
         assert type(exc_info.value) is Leap0Error
+        assert exc_info.value.retryable is True
+
+    def test_retryable_flag_is_preserved(self):
+        @intercept_errors("Failed to create sandbox: ")
+        def failing():
+            raise Leap0Error("temporary failure", retryable=True)
+
+        with pytest.raises(Leap0Error) as exc_info:
+            failing()
+        assert exc_info.value.retryable is True
 
     def test_generic_exception(self):
         @intercept_errors("Failed: ")

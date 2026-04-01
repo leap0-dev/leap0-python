@@ -24,11 +24,13 @@ class Leap0Error(Exception):
         headers: Mapping[str, Any] | None = None,
         *,
         body: str | None = None,
+        retryable: bool = False,
     ):
         self.message = message
         self.status_code: int | None = status_code
         self.headers: dict[str, Any] = dict(headers or {})
         self.body: str | None = body
+        self.retryable = retryable
         self.error_message: str | None = None
         if body:
             try:

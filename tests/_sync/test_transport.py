@@ -116,3 +116,18 @@ class TestTimeoutHandling:
             transport.request("GET", "/test")
 
         assert transport._client.request.call_args.kwargs["timeout"] == 0
+
+    def test_timeout_override_is_instance_scoped(self):
+        first = Transport(api_key="k1", base_url="https://api.example.com")
+        second = Transport(api_key="k2", base_url="https://api.example.com")
+        first._client = MagicMock()
+        second._client = MagicMock()
+        first._client.request.return_value = MagicMock(spec=httpx.Response, status_code=200)
+        second._client.request.return_value = MagicMock(spec=httpx.Response, status_code=200)
+
+        with first.override_timeout(1.5):
+            first.request("GET", "/first")
+            second.request("GET", "/second")
+
+        assert first._client.request.call_args.kwargs["timeout"] == 1.5
+        assert second._client.request.call_args.kwargs["timeout"] == second.timeout

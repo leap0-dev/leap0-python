@@ -33,6 +33,7 @@ def _raise_processed(prefix: str, exc: Exception) -> NoReturn:
             status_code=exc.status_code,
             headers=exc.headers,
             body=exc.body,
+            retryable=getattr(exc, "retryable", False),
         ) from None
 
     try:
@@ -44,7 +45,7 @@ def _raise_processed(prefix: str, exc: Exception) -> NoReturn:
         if isinstance(exc, _httpx.TimeoutException):
             raise Leap0TimeoutError(_prefixed_message(str(exc), prefix)) from None
         if isinstance(exc, (_httpx.ConnectError, _httpx.NetworkError)):
-            raise Leap0Error(_prefixed_message(str(exc), prefix)) from None
+            raise Leap0Error(_prefixed_message(str(exc), prefix), retryable=True) from None
 
     if isinstance(exc, RuntimeError):
         lowered = str(exc).lower()

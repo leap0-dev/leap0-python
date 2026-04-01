@@ -5,7 +5,6 @@ import functools
 import threading
 import time
 from collections.abc import Callable
-from contextlib import AbstractContextManager
 from typing import ParamSpec, Protocol, TypeVar, cast
 
 from opentelemetry import metrics, trace
@@ -58,7 +57,7 @@ class _SpanContextManagerProtocol(Protocol):
 class _TracerProtocol(Protocol):
     """Protocol for the OpenTelemetry tracer used by the SDK."""
 
-    def start_as_current_span(self, name: str) -> AbstractContextManager[_SpanProtocol]:
+    def start_as_current_span(self, name: str) -> _SpanContextManagerProtocol:
         """Create a context manager that activates a span."""
         ...
 
@@ -125,17 +124,17 @@ def with_instrumentation(name: str) -> Callable[[Callable[P, R]], Callable[P, R]
                 tracer = get_tracer()
                 histogram = _get_histogram(name)
 
-                start = time.time()
+                start = time.perf_counter()
                 with tracer.start_as_current_span(name) as span:
                     try:
                         result = await func(*args, **kwargs)
                         span.set_status(Status(StatusCode.OK))
-                        histogram.record((time.time() - start) * 1000, {"status": "success"})
+                        histogram.record((time.perf_counter() - start) * 1000, {"status": "success"})
                         return result
                     except Exception as exc:
                         span.set_status(Status(StatusCode.ERROR, str(exc)))
                         span.record_exception(exc)
-                        histogram.record((time.time() - start) * 1000, {"status": "error"})
+                        histogram.record((time.perf_counter() - start) * 1000, {"status": "error"})
                         raise
 
             return cast(Callable[P, R], async_wrapper)
@@ -145,17 +144,17 @@ def with_instrumentation(name: str) -> Callable[[Callable[P, R]], Callable[P, R]
             tracer = get_tracer()
             histogram = _get_histogram(name)
 
-            start = time.time()
+            start = time.perf_counter()
             with tracer.start_as_current_span(name) as span:
                 try:
                     result = func(*args, **kwargs)
                     span.set_status(Status(StatusCode.OK))
-                    histogram.record((time.time() - start) * 1000, {"status": "success"})
+                    histogram.record((time.perf_counter() - start) * 1000, {"status": "success"})
                     return result
                 except Exception as exc:
                     span.set_status(Status(StatusCode.ERROR, str(exc)))
                     span.record_exception(exc)
-                    histogram.record((time.time() - start) * 1000, {"status": "error"})
+                    histogram.record((time.perf_counter() - start) * 1000, {"status": "error"})
                     raise
 
         return cast(Callable[P, R], sync_wrapper)
