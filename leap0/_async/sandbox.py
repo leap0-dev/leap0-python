@@ -208,7 +208,9 @@ class AsyncSandboxesClient(Generic[AsyncSandboxT]):
             memory_mib: Memory in MiB (512 to 8192, must be even).
             timeout_min: Sandbox timeout in minutes (1 to 480).
             auto_pause: Whether the sandbox should auto-pause on timeout.
-            otel_export: Whether OpenTelemetry exporter variables should be injected.
+            otel_export: Inject OpenTelemetry exporter environment into the sandbox.
+                Requires ``OTEL_EXPORTER_OTLP_ENDPOINT`` in the local environment and
+                also forwards ``OTEL_EXPORTER_OTLP_HEADERS`` when present.
             env_vars: Environment variables to set inside the sandbox.
             network_policy: Outbound network policy for the sandbox.
             http_timeout: Optional HTTP request timeout in seconds for this SDK call.
