@@ -2,10 +2,12 @@ from __future__ import annotations
 
 
 def ensure_leading_slash(value: str) -> str:
+    """Return a path string that always starts with a slash."""
     return value if value.startswith("/") else f"/{value}"
 
 
 def sandbox_base_url(sandbox_id: str, sandbox_domain: str | None, *, port: int | None = None) -> str:
+    """Build the base HTTPS URL for a sandbox-scoped endpoint."""
     if not sandbox_domain:
         raise ValueError("sandbox_domain is required for sandbox host operations")
     subdomain = f"{sandbox_id}-{port}" if port is not None else sandbox_id
@@ -14,6 +16,7 @@ def sandbox_base_url(sandbox_id: str, sandbox_domain: str | None, *, port: int |
 
 
 def websocket_url_from_http(url: str) -> str:
+    """Convert an HTTP or HTTPS URL into WS or WSS."""
     if url.startswith("https://"):
         return url.replace("https://", "wss://", 1)
     if url.startswith("http://"):

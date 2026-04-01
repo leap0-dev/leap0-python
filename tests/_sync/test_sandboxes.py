@@ -1,0 +1,127 @@
+from __future__ import annotations
+
+from unittest.mock import MagicMock
+from types import SimpleNamespace
+
+import pytest
+
+from leap0.models.errors import Leap0Error
+from leap0._sync.sandbox import Sandbox as RichSandbox, SandboxesClient
+from leap0.models.sandbox import CreateSandboxParams, Sandbox
+
+
+class TestSandboxesClient:
+    def test_create(self, mock_transport):
+        mock_transport.request_json.return_value = {
+            "id": "sbx-1", "template_id": "tpl-1", "vcpu": 2, "memory_mib": 2048,
+            "disk_mib": 10240, "state": "starting", "auto_pause": False, "created_at": "",
+        }
+        result = SandboxesClient(mock_transport, sandbox_domain="s.dev").create(template_name="my-tpl", vcpu=2, memory_mib=2048)
+        args, kwargs = mock_transport.request_json.call_args
+        assert args == ("POST", "/v1/sandbox")
+        assert kwargs["json"]["template_name"] == "my-tpl"
+        assert result.id == "sbx-1"
+
+    def test_get(self, mock_transport):
+        mock_transport.request_json.return_value = {
+            "id": "sbx-1", "template_id": "t", "vcpu": 1, "memory_mib": 512,
+            "disk_mib": 10240, "state": "running", "auto_pause": False, "created_at": "",
+        }
+        SandboxesClient(mock_transport, sandbox_domain="s.dev").get("sbx-1")
+        assert mock_transport.request_json.call_args[0][1] == "/v1/sandbox/sbx-1/"
+
+    def test_delete(self, mock_transport):
+        mock_transport.request.return_value = MagicMock(status_code=204)
+        SandboxesClient(mock_transport, sandbox_domain="s.dev").delete("sbx-1")
+        assert mock_transport.request.call_args[1]["expected_status"] == 204
+
+    def test_accepts_sandbox_object(self, mock_transport):
+        mock_transport.request_json.return_value = {
+            "id": "sbx-1", "template_id": "t", "vcpu": 1, "memory_mib": 512,
+            "disk_mib": 10240, "state": "running", "auto_pause": False, "created_at": "",
+        }
+        SandboxesClient(mock_transport, sandbox_domain="s.dev").get(Sandbox(id="sbx-obj"))
+        assert "sbx-obj" in mock_transport.request_json.call_args[0][1]
+
+    def test_invoke_url(self, mock_transport):
+        assert SandboxesClient(mock_transport, sandbox_domain="sandbox.leap0.dev").invoke_url("sbx-1", "/api/health") == "https://sbx-1.sandbox.leap0.dev/api/health"
+
+    def test_factory_returns_rich_sandbox(self, mock_transport):
+        fake_client = SimpleNamespace(
+            filesystem=MagicMock(),
+            git=MagicMock(),
+            process=MagicMock(),
+            pty=MagicMock(),
+            lsp=MagicMock(),
+            ssh=MagicMock(),
+            code_interpreter=MagicMock(),
+            desktop=MagicMock(),
+        )
+        client = SandboxesClient(
+            mock_transport,
+            sandbox_domain="s.dev",
+            sandbox_factory=lambda data: RichSandbox(fake_client, data),
+        )
+        fake_client.sandboxes = client
+        mock_transport.request_json.return_value = {
+            "id": "sbx-1", "template_id": "tpl-1", "vcpu": 2, "memory_mib": 2048,
+            "disk_mib": 10240, "state": "starting", "auto_pause": False, "created_at": "",
+        }
+
+        result = client.create(template_name="my-tpl")
+
+        assert isinstance(result, RichSandbox)
+        assert result.id == "sbx-1"
+
+    def test_create_validates_input(self, mock_transport):
+        with pytest.raises(Leap0Error, match="memory_mib"):
+            SandboxesClient(mock_transport, sandbox_domain="s.dev").create(memory_mib=513)
+
+
+class TestCreateSandboxParams:
+    def test_default_template_is_bookworm(self):
+        assert CreateSandboxParams().template_name == "system/debian:bookworm"
+
+
+class TestRichSandbox:
+    def test_bound_service_methods_pass_sandbox(self):
+        process = MagicMock()
+        process.execute.return_value = MagicMock(stdout="Python 3.12")
+        sandboxes = MagicMock()
+        client = SimpleNamespace(
+            filesystem=MagicMock(),
+            git=MagicMock(),
+            process=process,
+            pty=MagicMock(),
+            lsp=MagicMock(),
+            ssh=MagicMock(),
+            code_interpreter=MagicMock(),
+            desktop=MagicMock(),
+            sandboxes=sandboxes,
+        )
+
+        sandbox = RichSandbox(client, Sandbox(id="sbx-1"))
+        result = sandbox.process.execute(command="python --version")
+
+        process.execute.assert_called_once_with(sandbox, command="python --version")
+        assert result.stdout == "Python 3.12"
+
+    def test_refresh_updates_metadata(self):
+        sandboxes = MagicMock()
+        client = SimpleNamespace(
+            filesystem=MagicMock(),
+            git=MagicMock(),
+            process=MagicMock(),
+            pty=MagicMock(),
+            lsp=MagicMock(),
+            ssh=MagicMock(),
+            code_interpreter=MagicMock(),
+            desktop=MagicMock(),
+            sandboxes=sandboxes,
+        )
+        sandbox = RichSandbox(client, Sandbox(id="sbx-1", state="starting"))
+        sandboxes.get.return_value = RichSandbox(client, Sandbox(id="sbx-1", state="running"))
+
+        sandbox.refresh()
+
+        assert sandbox.state == "running"

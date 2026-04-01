@@ -50,14 +50,13 @@ client = Leap0(Leap0Config())
 sandbox = client.sandboxes.create()
 
 try:
-    result = client.code_interpreter.execute(
-        sandbox,
+    result = sandbox.code_interpreter.execute(
         code="sum([10, 20, 30, 40]) / 4",
         language="python",
     )
     print(result.main_text)  # "25.0"
 finally:
-    client.sandboxes.delete(sandbox)
+    sandbox.delete()
     client.close()
 ```
 
@@ -68,11 +67,11 @@ from leap0 import Leap0Client
 
 with Leap0Client(api_key="your-api-key") as client:
     sandbox = client.sandboxes.create()
-    result = client.code_interpreter.execute(
-        sandbox, code="print('Hello from the sandbox!')", language="python"
+    result = sandbox.code_interpreter.execute(
+        code="print('Hello from the sandbox!')", language="python"
     )
     print(result.main_text)
-    client.sandboxes.delete(sandbox)
+    sandbox.delete()
 ```
 
 ## Features
@@ -82,13 +81,11 @@ with Leap0Client(api_key="your-api-key") as client:
 Stateful REPL sessions for Python and TypeScript. Variables persist across calls, with Matplotlib charts auto-captured as PNG and SVG.
 
 ```python
-result = client.code_interpreter.execute(
-    sandbox, code="x = 42", language="python"
-)
+result = sandbox.code_interpreter.execute(code="x = 42", language="python")
 
 # Stream output in real-time
-for event in client.code_interpreter.execute_stream(
-    sandbox, code="for i in range(5): print(i)", language="python"
+for event in sandbox.code_interpreter.execute_stream(
+    code="for i in range(5): print(i)", language="python"
 ):
     print(event.type, event.data)
 ```
@@ -98,10 +95,10 @@ for event in client.code_interpreter.execute_stream(
 Full filesystem access inside every sandbox. List, read, write, edit, search, and more.
 
 ```python
-client.filesystem.write_file_text(sandbox, path="/workspace/hello.txt", content="Hello!")
-content = client.filesystem.read_file_text(sandbox, path="/workspace/hello.txt")
-tree = client.filesystem.tree(sandbox, path="/workspace", max_depth=2)
-matches = client.filesystem.grep(sandbox, path="/workspace", pattern="TODO")
+sandbox.filesystem.write_file(path="/workspace/hello.txt", content="Hello!")
+content = sandbox.filesystem.read_file(path="/workspace/hello.txt")
+tree = sandbox.filesystem.tree(path="/workspace", max_depth=2)
+matches = sandbox.filesystem.grep(path="/workspace", pattern="TODO")
 ```
 
 ### Git
@@ -109,11 +106,11 @@ matches = client.filesystem.grep(sandbox, path="/workspace", pattern="TODO")
 Clone repos, create branches, stage files, commit, push, and pull, all inside the sandbox.
 
 ```python
-client.git.clone(sandbox, url="https://github.com/user/repo.git", path="/workspace/repo")
-status = client.git.status(sandbox, path="/workspace/repo")
-client.git.add(sandbox, path="/workspace/repo", files=["README.md"])
-client.git.commit(sandbox, path="/workspace/repo", message="Update README")
-client.git.push(sandbox, path="/workspace/repo")
+sandbox.git.clone(url="https://github.com/user/repo.git", path="/workspace/repo")
+status = sandbox.git.status(path="/workspace/repo")
+sandbox.git.add(path="/workspace/repo", files=["README.md"])
+sandbox.git.commit(path="/workspace/repo", message="Update README")
+sandbox.git.push(path="/workspace/repo")
 ```
 
 ### Process Execution
@@ -121,7 +118,7 @@ client.git.push(sandbox, path="/workspace/repo")
 Execute one-shot shell commands inside a running sandbox.
 
 ```python
-result = client.process.execute(sandbox, command=["ls", "-la", "/workspace"])
+result = sandbox.process.execute(command="ls -la /workspace")
 print(result.stdout)
 ```
 
@@ -130,8 +127,8 @@ print(result.stdout)
 Interactive terminal sessions over WebSocket with persistent state.
 
 ```python
-session = client.pty.create(sandbox, cols=120, rows=30, cwd="/home/user")
-conn = client.pty.connect(sandbox, session.id)
+session = sandbox.pty.create(cols=120, rows=30, cwd="/home/user")
+conn = sandbox.pty.connect(session.id)
 conn.send("ls -la\n")
 print(conn.recv().decode())
 conn.close()
@@ -142,9 +139,19 @@ conn.close()
 Start language servers for Python and TypeScript to get completions, symbols, and document lifecycle events.
 
 ```python
-client.lsp.start(sandbox, language="python")
-client.lsp.did_open(sandbox, uri="file:///workspace/main.py", language="python")
-completions = client.lsp.completions(sandbox, uri="file:///workspace/main.py", line=10, character=5)
+sandbox.lsp.start(language_id="python", path_to_project="/workspace")
+sandbox.lsp.did_open(
+    language_id="python",
+    path_to_project="/workspace",
+    uri="file:///workspace/main.py",
+)
+completions = sandbox.lsp.completions(
+    language_id="python",
+    path_to_project="/workspace",
+    uri="file:///workspace/main.py",
+    line=10,
+    character=5,
+)
 ```
 
 ### SSH Access
@@ -152,7 +159,7 @@ completions = client.lsp.completions(sandbox, uri="file:///workspace/main.py", l
 Generate and manage time-bound SSH credentials for direct sandbox access.
 
 ```python
-ssh = client.ssh.create_access(sandbox)
+ssh = sandbox.ssh.create_access()
 print(ssh.hostname, ssh.port, ssh.username)
 ```
 
@@ -161,10 +168,12 @@ print(ssh.hostname, ssh.port, ssh.username)
 Control a graphical desktop inside the sandbox. Take screenshots, move the pointer, click, type, and record the screen.
 
 ```python
-sandbox = client.sandboxes.create(template_name="system/desktop:v0.1.0")
-client.desktop.move_pointer(sandbox, x=500, y=300)
-client.desktop.click(sandbox, button=1)
-screenshot = client.desktop.screenshot(sandbox, image_format="png")
+from leap0 import DEFAULT_DESKTOP_TEMPLATE_NAME
+
+sandbox = client.sandboxes.create(template_name=DEFAULT_DESKTOP_TEMPLATE_NAME)
+sandbox.desktop.move_pointer(x=500, y=300)
+sandbox.desktop.click(button=1)
+screenshot = sandbox.desktop.screenshot(image_format="png")
 ```
 
 ### Snapshots
@@ -241,10 +250,16 @@ client = Leap0(Leap0Config(
 See the [`examples/`](examples/) directory for complete usage examples:
 
 - **[quickstart.py](examples/quickstart.py)** - Basic code execution
+- **[async_quickstart.py](examples/async_quickstart.py)** - Async client quickstart
+- **[async_filesystem_and_git.py](examples/async_filesystem_and_git.py)** - Async file and Git operations
+- **[async_code_interpreter_stream.py](examples/async_code_interpreter_stream.py)** - Async streaming code execution output
+- **[async_pty.py](examples/async_pty.py)** - Async interactive terminal session
 - **[code_interpreter_stream.py](examples/code_interpreter_stream.py)** - Streaming code execution output
 - **[filesystem_and_git.py](examples/filesystem_and_git.py)** - File and Git operations
 - **[pty.py](examples/pty.py)** - Interactive terminal session
 - **[desktop.py](examples/desktop.py)** - Desktop GUI automation
+- **[snapshots.py](examples/snapshots.py)** - Save and restore sandbox state
+- **[ssh.py](examples/ssh.py)** - Generate and validate SSH access
 
 ## Development
 
