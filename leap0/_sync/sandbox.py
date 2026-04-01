@@ -4,14 +4,13 @@ import os
 from functools import wraps
 from typing import Generic, Protocol, TypeVar, cast
 
+from ..constants import OTEL_EXPORTER_OTLP_ENDPOINT_ENV, OTEL_EXPORTER_OTLP_HEADERS_ENV
 from .._internal.types import SandboxFactory
 from ..models.config import (
     DEFAULT_MEMORY_MIB,
     DEFAULT_TEMPLATE_NAME,
     DEFAULT_TIMEOUT_MIN,
     DEFAULT_VCPU,
-    OTEL_EXPORTER_OTLP_ENDPOINT_ENV,
-    OTEL_EXPORTER_OTLP_HEADERS_ENV,
 )
 from ..models.sandbox import CreateSandboxParams, Sandbox as SandboxData, SandboxRef, SandboxStatus, sandbox_id_of
 from .._schemas.sandbox import NetworkPolicyDict, SandboxCreateResponseDict, SandboxStatusResponseDict
