@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import time
+from queue import Empty, Queue
+from threading import Thread
 from collections.abc import Iterator
 from typing import cast
 
@@ -592,11 +594,39 @@ class DesktopClient:
         response = self._transport.stream("GET", url, timeout=stream_timeout)
         try:
             events = iter_sse_events(response.iter_lines())
-            while True:
-                if deadline is not None and time.monotonic() >= deadline:
-                    raise Leap0TimeoutError("Desktop status stream timed out")
+
+            def _next_event(timeout: float | None) -> object:
+                result: Queue[tuple[str, object]] = Queue(maxsize=1)
+
+                def _read_event() -> None:
+                    try:
+                        result.put(("event", next(events)))
+                    except StopIteration as exc:
+                        result.put(("stop", exc))
+                    except BaseException as exc:  # pragma: no cover - passthrough guard
+                        result.put(("error", exc))
+
+                reader = Thread(target=_read_event, daemon=True)
+                reader.start()
                 try:
-                    event = next(events)
+                    kind, value = result.get(timeout=timeout)
+                except Empty as exc:
+                    raise Leap0TimeoutError("Desktop status stream timed out") from exc
+                if kind == "event":
+                    return value
+                if kind == "stop":
+                    raise cast(StopIteration, value)
+                raise cast(BaseException, value)
+
+            while True:
+                read_timeout = http_timeout
+                if deadline is not None:
+                    remaining_time = deadline - time.monotonic()
+                    if remaining_time <= 0:
+                        raise Leap0TimeoutError("Desktop status stream timed out")
+                    read_timeout = remaining_time if read_timeout is None else min(read_timeout, remaining_time)
+                try:
+                    event = _next_event(read_timeout)
                 except StopIteration:
                     break
                 if not isinstance(event, dict):
@@ -633,10 +663,8 @@ class DesktopClient:
         """
 
         def _is_transient_leap0(exc: BaseException) -> bool:
-            """Return True for transient Leap0Errors (not timeouts)."""
-            if isinstance(exc, Leap0TimeoutError):
-                return False
-            return isinstance(exc, Leap0Error)
+            """Return True only for retryable Leap0 errors."""
+            return isinstance(exc, Leap0Error) and not isinstance(exc, Leap0TimeoutError) and exc.retryable
 
         deadline = time.monotonic() + timeout
 
@@ -650,7 +678,7 @@ class DesktopClient:
             for status in self.status_stream(sandbox, deadline=deadline, http_timeout=http_timeout):
                 if status.status == "running":
                     return
-            raise Leap0Error("Desktop status stream ended without reaching 'running' state")
+            raise Leap0Error("Desktop status stream ended without reaching 'running' state", retryable=True)
 
         try:
             _poll()

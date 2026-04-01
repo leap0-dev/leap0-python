@@ -93,15 +93,6 @@ class CodeInterpreterClient:
             sandbox: Sandbox ID or object.
             http_timeout: Optional HTTP request timeout in seconds for this SDK call.
 
-        Args:
-            sandbox: Sandbox ID or object.
-            language: Language runtime (e.g. ``"python"``, ``"typescript"``).
-            cwd: Working directory (default ``"/home/user"``).
-
-            http_timeout: Optional HTTP request timeout in seconds for this SDK call.
-        Returns:
-            CodeContext: Newly created persistent execution context.
-
         Returns:
             bool: ``True`` when the service reports ``"ok"``.
         """
@@ -111,15 +102,15 @@ class CodeInterpreterClient:
     @intercept_errors("Failed to create execution context: ")
     def create_context(self, sandbox: SandboxRef, *, language: str = "python", cwd: str | None = None, http_timeout: float | None = None) -> CodeContext:
         """Create a new execution context.
-        
+
         Args:
             sandbox: Sandbox ID or object.
-            language: Language runtime for the operation.
-            cwd: Working directory for the operation.
+            language: Language runtime (default ``"python"``).
+            cwd: Working directory for the new context.
             http_timeout: Optional HTTP request timeout in seconds for this SDK call.
-        
+
         Returns:
-            object: Result returned by this operation.
+            CodeContext: Newly created persistent execution context.
         """
         payload: JsonObject = {"language": language}
         if cwd is not None:
@@ -135,14 +126,6 @@ class CodeInterpreterClient:
             sandbox: Sandbox ID or object.
             http_timeout: Optional HTTP request timeout in seconds for this SDK call.
 
-        Args:
-            sandbox: Sandbox ID or object.
-            context_id: Execution context ID.
-            http_timeout: Optional HTTP request timeout in seconds for this SDK call.
-
-        Returns:
-            CodeContext: Matching execution context.
-
         Returns:
             list[CodeContext]: Active execution contexts.
         """
@@ -154,14 +137,14 @@ class CodeInterpreterClient:
     @intercept_errors("Failed to get execution context: ")
     def get_context(self, sandbox: SandboxRef, context_id: str, http_timeout: float | None = None) -> CodeContext:
         """Get a single execution context by ID.
-        
+
         Args:
             sandbox: Sandbox ID or object.
-            context_id: Parameter for this operation.
+            context_id: Execution context identifier.
             http_timeout: Optional HTTP request timeout in seconds for this SDK call.
-        
+
         Returns:
-            object: Result returned by this operation.
+            CodeContext: Matching execution context.
         """
         data = cast(CodeContextDict, self._request_json("GET", sandbox, f"/contexts/{context_id}", http_timeout=http_timeout))
         return CodeContext.from_dict(data)
@@ -169,10 +152,10 @@ class CodeInterpreterClient:
     @intercept_errors("Failed to delete execution context: ")
     def delete_context(self, sandbox: SandboxRef, context_id: str) -> None:
         """Delete an execution context.
-        
+
         Args:
             sandbox: Sandbox ID or object.
-            context_id: Parameter for this operation.
+            context_id: Execution context identifier.
         """
         self._request("DELETE", sandbox, f"/contexts/{context_id}", expected_status=204)
 
@@ -198,26 +181,7 @@ class CodeInterpreterClient:
                 Auto-generated if omitted.
             env_vars: Environment variables for the execution.
             timeout_ms: Execution timeout in milliseconds (default 30000).
-
             http_timeout: Optional HTTP request timeout in seconds for this SDK call.
-
-        Args:
-            sandbox: Sandbox ID or object.
-            code: Source code to execute.
-            language: Language runtime (default ``"python"``).
-            context_id: Link to an existing context to share state.
-            timeout_ms: Execution timeout in milliseconds (default 30000).
-
-        Args:
-            sandbox: Sandbox ID or object.
-            code: Source code to execute.
-            language: Language runtime (default ``"python"``).
-            context_id: Link to an existing context to share state.
-            timeout_ms: Execution timeout in milliseconds (default 30000).
-            http_timeout: Optional HTTP request timeout in seconds for this SDK call.
-
-        Yields:
-            StreamEvent: Streaming stdout, stderr, exit, and error events.
 
         Returns:
             CodeExecutionResult: Structured execution output, errors, and logs.

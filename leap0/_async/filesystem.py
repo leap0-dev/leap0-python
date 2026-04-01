@@ -297,14 +297,16 @@ class AsyncFilesystemClient:
 
     @intercept_errors("Failed to read files: ")
     async def read_files(self, sandbox: SandboxRef, *, paths: list[str], encoding: str = "utf-8", http_timeout: float | None = None) -> dict[str, str]:
-        """
-                    Read multiple files and return decoded text keyed by path.
-        
-                    Args:
-                    http_timeout: Optional HTTP request timeout in seconds for this SDK call.
-        
+        """Read multiple files and return decoded text keyed by path.
+
+        Args:
+            sandbox: Sandbox ID or object.
+            paths: File paths to read.
+            encoding: Text encoding used to decode each file.
+            http_timeout: Optional HTTP request timeout in seconds for this SDK call.
+
         Returns:
-            object: Result returned by this operation.
+            dict[str, str]: Mapping of file path to decoded text content.
         """
         return {
             path: content.decode(encoding)
@@ -383,10 +385,6 @@ class AsyncFilesystemClient:
             pattern: Text pattern to search for.
             include: File pattern filter (e.g. ``"*.py"``).
             exclude: Glob patterns to exclude.
-
-            http_timeout: Optional HTTP request timeout in seconds for this SDK call.
-
-        Args:
             http_timeout: Optional HTTP request timeout in seconds for this SDK call.
 
         Returns:

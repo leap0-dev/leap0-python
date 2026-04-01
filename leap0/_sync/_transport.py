@@ -38,9 +38,8 @@ class Transport:
         self.timeout = timeout
         self.auth_header = auth_header
         self.bearer = bearer
+        self._timeout_override: ContextVar[float | None] = ContextVar("leap0_sync_timeout_override", default=None)
         self._client = httpx.Client(timeout=timeout)
-
-    _timeout_override: ContextVar[float | None] = ContextVar("leap0_sync_timeout_override", default=None)
 
     @property
     def auth_value(self) -> str:
