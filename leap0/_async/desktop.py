@@ -3,16 +3,11 @@ from __future__ import annotations
 import asyncio
 import time
 from collections.abc import AsyncIterator
-from typing import Any, cast
+from typing import cast
 
 import httpx
 
 from .._internal.types import JsonObject
-from ._transport import AsyncTransport
-from .._utils.errors import intercept_errors
-from .._utils.stream import aiter_sse_events
-from .._utils.url import sandbox_base_url
-from ..models.errors import Leap0Error, Leap0TimeoutError
 from ..models.desktop import (
     DesktopDisplayInfo,
     DesktopDisplayInfoDict,
@@ -38,6 +33,11 @@ from ..models.desktop import (
     DesktopWindowsDict,
 )
 from ..models.sandbox import SandboxRef, sandbox_id_of
+from ..models.errors import Leap0Error, Leap0TimeoutError
+from .._utils.errors import intercept_errors
+from .._utils.stream import aiter_sse_events
+from .._utils.url import sandbox_base_url
+from ._transport import AsyncTransport
 
 
 class AsyncDesktopClient:
@@ -316,17 +316,18 @@ class AsyncDesktopClient:
         return DesktopPointerPosition.from_dict(data)
 
     @intercept_errors("Failed to type text: ")
-    async def type_text(self, sandbox: SandboxRef, *, text: str) -> bool:
+    async def type_text(self, sandbox: SandboxRef, *, text: str, http_timeout: float | None = None) -> bool:
         """Type text through the desktop input service.
         
         Args:
             sandbox: Sandbox ID or object.
-            text: Parameter for this operation.
+            text: Text to type.
+            http_timeout: Optional HTTP request timeout in seconds for this SDK call.
         
         Returns:
             object: Result returned by this operation.
         """
-        data = await self._request_json("POST", sandbox, "/api/input/type", json={"text": text})
+        data = await self._request_json("POST", sandbox, "/api/input/type", json={"text": text}, http_timeout=http_timeout)
         return bool(data.get("ok", False))
 
     @intercept_errors("Failed to press key: ")
@@ -549,11 +550,22 @@ class AsyncDesktopClient:
             object: Items yielded by this operation.
         """
         url = f"{sandbox_base_url(sandbox_id_of(sandbox), self._sandbox_domain)}/api/status/stream"
-        response = await self._transport.stream("GET", url, timeout=http_timeout)
+        stream_timeout = http_timeout
+        if deadline is not None:
+            remaining_time = deadline - time.monotonic()
+            if remaining_time <= 0:
+                raise Leap0TimeoutError("Desktop status stream timed out")
+            stream_timeout = remaining_time if stream_timeout is None else min(stream_timeout, remaining_time)
+        response = await self._transport.stream("GET", url, timeout=stream_timeout)
         try:
-            async for event in aiter_sse_events(response.aiter_lines()):
+            events = aiter_sse_events(response.aiter_lines())
+            while True:
                 if deadline is not None and time.monotonic() >= deadline:
                     raise Leap0TimeoutError("Desktop status stream timed out")
+                try:
+                    event = await events.__anext__()
+                except StopAsyncIteration:
+                    break
                 if not isinstance(event, dict):
                     continue
                 if "error" in event:

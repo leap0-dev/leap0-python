@@ -6,10 +6,6 @@ from typing import Any, cast
 import httpx
 
 from .._internal.types import JsonObject
-from ._transport import AsyncTransport
-from .._utils.errors import intercept_errors
-from .._utils.stream import aiter_sse_events
-from .._utils.url import sandbox_base_url
 from ..models.code_interpreter import (
     CodeContext,
     CodeContextDict,
@@ -19,6 +15,10 @@ from ..models.code_interpreter import (
     StreamEventDict,
 )
 from ..models.sandbox import SandboxRef, sandbox_id_of
+from .._utils.errors import intercept_errors
+from .._utils.stream import aiter_sse_events
+from .._utils.url import sandbox_base_url
+from ._transport import AsyncTransport
 
 
 class AsyncCodeInterpreterClient:
@@ -171,8 +171,7 @@ class AsyncCodeInterpreterClient:
             payload["env_vars"] = env_vars
         if timeout_ms is not None:
             payload["timeout_ms"] = timeout_ms
-        response = await self._request("POST", sandbox, "/execute", json=payload, http_timeout=http_timeout)
-        data = cast(CodeExecutionResultDict, response.json())
+        data = cast(CodeExecutionResultDict, await self._request_json("POST", sandbox, "/execute", json=payload, http_timeout=http_timeout))
         return CodeExecutionResult.from_dict(data)
 
     @intercept_errors("Failed to execute code: ")

@@ -7,10 +7,10 @@ from typing import BinaryIO
 import httpx
 
 from .._internal.types import BinaryFiles, JsonObject
-from .._utils.otel import with_instrumentation
 from .._internal.version import SDK_VERSION
 from ..models.config import DEFAULT_CLIENT_TIMEOUT
 from ..models.errors import raise_api_error
+from .._utils.otel import with_instrumentation
 
 
 

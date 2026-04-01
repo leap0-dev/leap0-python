@@ -5,9 +5,10 @@ from enum import Enum
 from typing import Protocol
 
 from pydantic import BaseModel, ConfigDict, model_validator
+
 from .._internal.types import JsonObject
-from .config import DEFAULT_MEMORY_MIB, DEFAULT_TEMPLATE_NAME, DEFAULT_TIMEOUT_MIN, DEFAULT_VCPU
 from .._schemas.sandbox import NetworkPolicyDict, SandboxCreateResponseDict, SandboxStatusResponseDict, TransformRuleDict
+from .config import DEFAULT_MEMORY_MIB, DEFAULT_TEMPLATE_NAME, DEFAULT_TIMEOUT_MIN, DEFAULT_VCPU
 
 class SandboxState(str, Enum):
     """Lifecycle states for a sandbox."""

@@ -6,14 +6,14 @@ from typing import Any, cast
 import httpx
 
 from .._internal.types import JsonObject
-from ._transport import Transport
-from .._utils.errors import intercept_errors
-from .._utils.stream import iter_sse_events
-from .._utils.url import sandbox_base_url
 from ..models.code_interpreter import (
     CodeContext, CodeContextDict, CodeExecutionResult, CodeExecutionResultDict, StreamEvent, StreamEventDict,
 )
 from ..models.sandbox import SandboxRef, sandbox_id_of
+from .._utils.errors import intercept_errors
+from .._utils.stream import iter_sse_events
+from .._utils.url import sandbox_base_url
+from ._transport import Transport
 
 
 class CodeInterpreterClient:

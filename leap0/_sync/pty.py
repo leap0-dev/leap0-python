@@ -6,12 +6,12 @@ from typing import Any, cast
 from websockets.sync.client import connect
 
 from .._internal.types import JsonObject
-from ._transport import Transport
+from ..models.pty import CreatePtySessionParams, PtyConnection, PtySession
+from ..models.sandbox import SandboxRef, sandbox_id_of
+from .._schemas.pty import PtyListResponseDict, PtySessionInfoDict
 from .._utils.errors import intercept_errors
 from .._utils.url import websocket_url_from_http
-from ..models.pty import CreatePtySessionParams, PtyConnection, PtySession
-from .._schemas.pty import PtyListResponseDict, PtySessionInfoDict
-from ..models.sandbox import SandboxRef, sandbox_id_of
+from ._transport import Transport
 
 
 class PtyClient:

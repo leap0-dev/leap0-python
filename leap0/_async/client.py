@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from types import TracebackType
 
 from opentelemetry import metrics, trace
@@ -10,9 +11,7 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.semconv.attributes import service_attributes
 
-from ._transport import AsyncTransport
 from .._internal.version import SDK_VERSION
-from .._utils.otel import with_instrumentation
 from ..models.config import (
     DEFAULT_BASE_URL,
     DEFAULT_CLIENT_TIMEOUT,
@@ -25,6 +24,8 @@ from ..models.config import (
     DEFAULT_VCPU,
     Leap0Config,
 )
+from .._utils.otel import with_instrumentation
+from ._transport import AsyncTransport
 from .code_interpreter import AsyncCodeInterpreterClient
 from .desktop import AsyncDesktopClient
 from .filesystem import AsyncFilesystemClient
@@ -71,6 +72,7 @@ class AsyncLeap0Client:
     def __init__(
         self,
         *,
+        config: Leap0Config | None = None,
         api_key: str | None = None,
         base_url: str | None = None,
         sandbox_domain: str | None = None,
@@ -79,15 +81,31 @@ class AsyncLeap0Client:
         bearer: bool = True,
         otel_enabled: bool | None = None,
     ):
-        config = Leap0Config(
-            api_key=api_key,
-            base_url=base_url,
-            sandbox_domain=sandbox_domain,
-            timeout=timeout,
-            auth_header=auth_header,
-            bearer=bearer,
-            otel_enabled=otel_enabled,
-        )
+        if config is not None:
+            provided_overrides = {
+                "api_key": api_key,
+                "base_url": base_url,
+                "sandbox_domain": sandbox_domain,
+                "auth_header": auth_header if auth_header != "authorization" else None,
+                "bearer": bearer if bearer is not True else None,
+                "otel_enabled": otel_enabled,
+            }
+            if timeout != DEFAULT_CLIENT_TIMEOUT:
+                provided_overrides["timeout"] = timeout
+            conflicting = [name for name, value in provided_overrides.items() if value is not None]
+            if conflicting:
+                joined = ", ".join(conflicting)
+                raise ValueError(f"Cannot pass config with individual overrides: {joined}")
+        if config is None:
+            config = Leap0Config(
+                api_key=api_key,
+                base_url=base_url,
+                sandbox_domain=sandbox_domain,
+                timeout=timeout,
+                auth_header=auth_header,
+                bearer=bearer,
+                otel_enabled=otel_enabled,
+            )
         self._transport = AsyncTransport(
             api_key=config.api_key,
             base_url=config.base_url,
@@ -174,9 +192,9 @@ class AsyncLeap0Client:
         """Close the client and release resources."""
         await self._transport.close()
         if self._owns_tracer_provider and self._tracer_provider is not None:
-            self._tracer_provider.shutdown()
+            await asyncio.to_thread(self._tracer_provider.shutdown)
         if self._owns_meter_provider and self._meter_provider is not None:
-            self._meter_provider.shutdown()
+            await asyncio.to_thread(self._meter_provider.shutdown)
 
     async def __aenter__(self) -> AsyncLeap0Client:
         return self
@@ -199,15 +217,7 @@ def AsyncLeap0(config: Leap0Config) -> AsyncLeap0Client:
     Returns:
         AsyncLeap0Client: Configured asynchronous client instance.
     """
-    return AsyncLeap0Client(
-        api_key=config.api_key,
-        base_url=config.base_url,
-        sandbox_domain=config.sandbox_domain,
-        timeout=config.timeout,
-        auth_header=config.auth_header,
-        bearer=config.bearer,
-        otel_enabled=config.otel_enabled,
-    )
+    return AsyncLeap0Client(config=config)
 
 
 __all__ = ["AsyncLeap0", "AsyncLeap0Client", "AsyncPtyConnection"]

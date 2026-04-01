@@ -1,19 +1,18 @@
 from __future__ import annotations
+
 from types import TracebackType
 from typing import Self
 
 from opentelemetry import metrics, trace
+from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk.metrics import MeterProvider
+from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.semconv.attributes import service_attributes
 
-from ._transport import Transport
-from .._utils.otel import with_instrumentation
-from .code_interpreter import CodeInterpreterClient
-from .desktop import DesktopClient
 from ..models.config import (
     DEFAULT_BASE_URL,
     DEFAULT_CLIENT_TIMEOUT,
@@ -26,6 +25,10 @@ from ..models.config import (
     DEFAULT_VCPU,
     Leap0Config,
 )
+from .._utils.otel import with_instrumentation
+from ._transport import Transport
+from .code_interpreter import CodeInterpreterClient
+from .desktop import DesktopClient
 from .filesystem import FilesystemClient
 from .git import GitClient
 from .lsp import LspClient
@@ -148,7 +151,8 @@ class Leap0Client:
 
         current_meter_provider = metrics.get_meter_provider()
         if not isinstance(current_meter_provider, MeterProvider):
-            self._meter_provider = MeterProvider(resource=resource)
+            metric_reader = PeriodicExportingMetricReader(OTLPMetricExporter())
+            self._meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
             metrics.set_meter_provider(self._meter_provider)
             self._owns_meter_provider = True
         else:
