@@ -4,7 +4,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from leap0 import CodeExecutionResult, Leap0Client, Sandbox
+from leap0 import Leap0Client, ProcessResult, Sandbox
 
 
 def main() -> None:
@@ -12,12 +12,10 @@ def main() -> None:
     sandbox: Sandbox = client.sandboxes.create()
 
     try:
-        result: CodeExecutionResult = sandbox.code_interpreter.execute(
-            code="sum([10, 20, 30, 40]) / 4",
-            language="python",
-        )
+        result: ProcessResult = sandbox.process.execute(command="echo hello from leap0")
         print("sandbox:", sandbox.id)
-        print("result:", result.main_text)
+        print("exit code:", result.exit_code)
+        print("result:", result.result.strip())
     finally:
         sandbox.delete()
         client.close()

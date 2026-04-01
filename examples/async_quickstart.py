@@ -6,7 +6,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from leap0 import AsyncLeap0Client, AsyncSandbox, CodeExecutionResult
+from leap0 import AsyncLeap0Client, AsyncSandbox, ProcessResult
 
 
 async def main() -> None:
@@ -14,12 +14,10 @@ async def main() -> None:
         sandbox: AsyncSandbox = await client.sandboxes.create()
 
         try:
-            result: CodeExecutionResult = await sandbox.code_interpreter.execute(
-                code="print('hello from async leap0')",
-                language="python",
-            )
+            result: ProcessResult = await sandbox.process.execute(command="echo hello from async leap0")
             print("sandbox:", sandbox.id)
-            print("result:", result.main_text)
+            print("exit code:", result.exit_code)
+            print("result:", result.result.strip())
         finally:
             await sandbox.delete()
 

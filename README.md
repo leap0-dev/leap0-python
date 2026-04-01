@@ -50,11 +50,8 @@ client = Leap0Client()
 sandbox = client.sandboxes.create()
 
 try:
-    result = sandbox.code_interpreter.execute(
-        code="sum([10, 20, 30, 40]) / 4",
-        language="python",
-    )
-    print(result.main_text)  # "25.0"
+    result = sandbox.process.execute(command="echo hello from leap0")
+    print(result.result.strip())
 finally:
     sandbox.delete()
     client.close()
@@ -67,10 +64,8 @@ from leap0 import Leap0Client
 
 with Leap0Client(api_key="your-api-key") as client:
     sandbox = client.sandboxes.create()
-    result = sandbox.code_interpreter.execute(
-        code="print('Hello from the sandbox!')", language="python"
-    )
-    print(result.main_text)
+    result = sandbox.process.execute(command="echo hello from the sandbox")
+    print(result.result.strip())
     sandbox.delete()
 ```
 
@@ -81,6 +76,9 @@ with Leap0Client(api_key="your-api-key") as client:
 Stateful REPL sessions for Python and TypeScript. Variables persist across calls, with Matplotlib charts auto-captured as PNG and SVG.
 
 ```python
+from leap0 import DEFAULT_CODE_INTERPRETER_TEMPLATE_NAME
+
+sandbox = client.sandboxes.create(template_name=DEFAULT_CODE_INTERPRETER_TEMPLATE_NAME)
 result = sandbox.code_interpreter.execute(code="x = 42", language="python")
 
 # Stream output in real-time

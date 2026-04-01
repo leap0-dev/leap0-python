@@ -6,12 +6,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from leap0 import AsyncLeap0Client, AsyncSandbox, StreamEvent
+from leap0 import AsyncLeap0Client, AsyncSandbox, DEFAULT_CODE_INTERPRETER_TEMPLATE_NAME, StreamEvent
 
 
 async def main() -> None:
     async with AsyncLeap0Client() as client:
-        sandbox: AsyncSandbox = await client.sandboxes.create()
+        sandbox: AsyncSandbox = await client.sandboxes.create(template_name=DEFAULT_CODE_INTERPRETER_TEMPLATE_NAME)
 
         try:
             async for event in sandbox.code_interpreter.execute_stream(
