@@ -53,10 +53,6 @@ class GitClient:
             depth: Shallow clone depth.
             username: Auth username (for private repos).
             password: Auth password or token (for private repos).
-
-            http_timeout: Optional HTTP request timeout in seconds for this SDK call.
-
-        Args:
             http_timeout: Optional HTTP request timeout in seconds for this SDK call.
 
         Returns:
@@ -134,7 +130,7 @@ class GitClient:
         payload: JsonObject = {"path": path}
         if context_lines is not None:
             payload["context_lines"] = context_lines
-        return self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/diff-unstaged", payload)
+        return self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/diff-unstaged", payload, http_timeout=http_timeout)
 
     @intercept_errors("Failed to get staged diff: ")
     def diff_staged(self, sandbox: SandboxRef, *, path: str, context_lines: int | None = None, http_timeout: float | None = None) -> GitResult:
@@ -150,7 +146,7 @@ class GitClient:
         payload: JsonObject = {"path": path}
         if context_lines is not None:
             payload["context_lines"] = context_lines
-        return self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/diff-staged", payload)
+        return self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/diff-staged", payload, http_timeout=http_timeout)
 
     @intercept_errors("Failed to get diff: ")
     def diff(self, sandbox: SandboxRef, *, path: str, target: str, context_lines: int | None = None, http_timeout: float | None = None) -> GitResult:
@@ -166,7 +162,7 @@ class GitClient:
         payload: JsonObject = {"path": path, "target": target}
         if context_lines is not None:
             payload["context_lines"] = context_lines
-        return self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/diff", payload)
+        return self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/diff", payload, http_timeout=http_timeout)
 
     @intercept_errors("Failed to reset: ")
     def reset(self, sandbox: SandboxRef, *, path: str) -> GitResult:
@@ -212,7 +208,7 @@ class GitClient:
             payload["start_timestamp"] = start_timestamp
         if end_timestamp is not None:
             payload["end_timestamp"] = end_timestamp
-        return self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/log", payload)
+        return self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/log", payload, http_timeout=http_timeout)
 
     @intercept_errors("Failed to show revision: ")
     def show(self, sandbox: SandboxRef, *, path: str, revision: str = "HEAD") -> GitResult:
@@ -257,7 +253,7 @@ class GitClient:
             payload["checkout"] = checkout
         if base_branch is not None:
             payload["base_branch"] = base_branch
-        return self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/create-branch", payload)
+        return self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/create-branch", payload, http_timeout=http_timeout)
 
     @intercept_errors("Failed to checkout branch: ")
     def checkout_branch(self, sandbox: SandboxRef, *, path: str, branch: str, create: bool | None = None, http_timeout: float | None = None) -> GitResult:
@@ -273,7 +269,7 @@ class GitClient:
         payload: JsonObject = {"path": path, "branch": branch}
         if create is not None:
             payload["create"] = create
-        return self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/checkout-branch", payload)
+        return self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/checkout-branch", payload, http_timeout=http_timeout)
 
     @intercept_errors("Failed to delete branch: ")
     def delete_branch(self, sandbox: SandboxRef, *, path: str, name: str, force: bool = False) -> GitResult:
@@ -301,7 +297,7 @@ class GitClient:
         Returns:
             object: Result returned by this operation.
         """
-        return self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/add", {"path": path, "files": files})
+        return self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/add", {"path": path, "files": files}, http_timeout=http_timeout)
 
     @intercept_errors("Failed to commit: ")
     def commit(
@@ -324,17 +320,6 @@ class GitClient:
             author: Author name.
             email: Author email.
             allow_empty: Allow creating an empty commit.
-
-            http_timeout: Optional HTTP request timeout in seconds for this SDK call.
-
-        Args:
-            sandbox: Sandbox ID or object.
-            path: Path to the git repo.
-            remote: Remote name (default ``"origin"``).
-            branch: Branch name.
-            set_upstream: Set upstream tracking.
-            username: Auth username.
-            password: Auth password or token.
             http_timeout: Optional HTTP request timeout in seconds for this SDK call.
 
         Returns:
@@ -394,7 +379,7 @@ class GitClient:
             payload["username"] = username
         if password is not None:
             payload["password"] = password
-        return self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/push", payload)
+        return self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/push", payload, http_timeout=http_timeout)
 
     @intercept_errors("Failed to pull: ")
     def pull(
@@ -439,4 +424,4 @@ class GitClient:
             payload["username"] = username
         if password is not None:
             payload["password"] = password
-        return self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/pull", payload)
+        return self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/pull", payload, http_timeout=http_timeout)

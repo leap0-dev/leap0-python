@@ -260,6 +260,7 @@ _DYNAMIC_IMPORTS: dict[str, tuple[str, str]] = {
     "SshValidation": (".models.ssh", "SshValidation"),
     "CreateTemplateParams": (".models.template", "CreateTemplateParams"),
     "ImageConfig": (".models.template", "ImageConfig"),
+    "RegistryCredentialsDict": (".models.template", "RegistryCredentialsDict"),
     "Template": (".models.template", "Template"),
     "RenameTemplateParams": (".models.template", "RenameTemplateParams"),
     "CodeContext": (".models.code_interpreter", "CodeContext"),

@@ -134,7 +134,7 @@ class AsyncGitClient:
         payload: JsonObject = {"path": path}
         if context_lines is not None:
             payload["context_lines"] = context_lines
-        return await self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/diff-unstaged", payload)
+        return await self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/diff-unstaged", payload, http_timeout=http_timeout)
 
     @intercept_errors("Failed to get staged diff: ")
     async def diff_staged(self, sandbox: SandboxRef, *, path: str, context_lines: int | None = None, http_timeout: float | None = None) -> GitResult:
@@ -150,7 +150,7 @@ class AsyncGitClient:
         payload: JsonObject = {"path": path}
         if context_lines is not None:
             payload["context_lines"] = context_lines
-        return await self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/diff-staged", payload)
+        return await self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/diff-staged", payload, http_timeout=http_timeout)
 
     @intercept_errors("Failed to get diff: ")
     async def diff(self, sandbox: SandboxRef, *, path: str, target: str, context_lines: int | None = None, http_timeout: float | None = None) -> GitResult:
@@ -166,7 +166,7 @@ class AsyncGitClient:
         payload: JsonObject = {"path": path, "target": target}
         if context_lines is not None:
             payload["context_lines"] = context_lines
-        return await self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/diff", payload)
+        return await self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/diff", payload, http_timeout=http_timeout)
 
     @intercept_errors("Failed to reset: ")
     async def reset(self, sandbox: SandboxRef, *, path: str) -> GitResult:
@@ -212,7 +212,7 @@ class AsyncGitClient:
             payload["start_timestamp"] = start_timestamp
         if end_timestamp is not None:
             payload["end_timestamp"] = end_timestamp
-        return await self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/log", payload)
+        return await self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/log", payload, http_timeout=http_timeout)
 
     @intercept_errors("Failed to show revision: ")
     async def show(self, sandbox: SandboxRef, *, path: str, revision: str = "HEAD") -> GitResult:
@@ -257,7 +257,7 @@ class AsyncGitClient:
             payload["checkout"] = checkout
         if base_branch is not None:
             payload["base_branch"] = base_branch
-        return await self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/create-branch", payload)
+        return await self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/create-branch", payload, http_timeout=http_timeout)
 
     @intercept_errors("Failed to checkout branch: ")
     async def checkout_branch(self, sandbox: SandboxRef, *, path: str, branch: str, create: bool | None = None, http_timeout: float | None = None) -> GitResult:
@@ -273,7 +273,7 @@ class AsyncGitClient:
         payload: JsonObject = {"path": path, "branch": branch}
         if create is not None:
             payload["create"] = create
-        return await self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/checkout-branch", payload)
+        return await self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/checkout-branch", payload, http_timeout=http_timeout)
 
     @intercept_errors("Failed to delete branch: ")
     async def delete_branch(self, sandbox: SandboxRef, *, path: str, name: str, force: bool = False) -> GitResult:
@@ -301,7 +301,7 @@ class AsyncGitClient:
         Returns:
             object: Result returned by this operation.
         """
-        return await self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/add", {"path": path, "files": files})
+        return await self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/add", {"path": path, "files": files}, http_timeout=http_timeout)
 
     @intercept_errors("Failed to commit: ")
     async def commit(
@@ -394,7 +394,7 @@ class AsyncGitClient:
             payload["username"] = username
         if password is not None:
             payload["password"] = password
-        return await self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/push", payload)
+        return await self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/push", payload, http_timeout=http_timeout)
 
     @intercept_errors("Failed to pull: ")
     async def pull(
@@ -439,4 +439,4 @@ class AsyncGitClient:
             payload["username"] = username
         if password is not None:
             payload["password"] = password
-        return await self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/pull", payload)
+        return await self._git_result(f"/v1/sandbox/{sandbox_id_of(sandbox)}/git/pull", payload, http_timeout=http_timeout)

@@ -6,7 +6,7 @@ from ._transport import Transport
 from .._internal.types import SandboxFactory
 from .._utils.errors import intercept_errors
 from ..models.sandbox import Sandbox, SandboxRef, sandbox_id_of
-from .._schemas.sandbox import SandboxCreateResponseDict
+from .._schemas.sandbox import NetworkPolicyDict, SandboxCreateResponseDict
 from ..models.snapshot import CreateSnapshotParams, ResumeSnapshotParams, Snapshot, SnapshotRef, snapshot_id_of
 from .._schemas.snapshot import SnapshotCreateResponseDict
 

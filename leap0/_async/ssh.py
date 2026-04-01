@@ -17,8 +17,8 @@ class AsyncSshClient:
     
         Example:
             ```python
-            sandbox = client.sandboxes.create()
-            access = sandbox.ssh.create_access()
+            sandbox = await client.sandboxes.create()
+            access = await sandbox.ssh.create_access()
             print(access.command)
             ```
         

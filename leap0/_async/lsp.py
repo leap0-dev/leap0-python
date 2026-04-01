@@ -132,7 +132,15 @@ class AsyncLspClient:
         await self.did_open(sandbox, language_id=language_id, path_to_project=path_to_project, uri=_file_uri(path), text=text, version=version, http_timeout=http_timeout)
 
     @intercept_errors("Failed to close document: ")
-    async def did_close(self, sandbox: SandboxRef, *, language_id: str, path_to_project: str, uri: str) -> None:
+    async def did_close(
+        self,
+        sandbox: SandboxRef,
+        *,
+        language_id: str,
+        path_to_project: str,
+        uri: str,
+        http_timeout: float | None = None,
+    ) -> None:
         """Notify the language server that a document was closed.
         
         Args:
@@ -146,6 +154,7 @@ class AsyncLspClient:
             f"/v1/sandbox/{sandbox_id_of(sandbox)}/lsp/did-close",
             json={"language_id": language_id, "path_to_project": path_to_project, "uri": uri},
             expected_status=204,
+            timeout=http_timeout,
         )
 
     @intercept_errors("Failed to close document: ")

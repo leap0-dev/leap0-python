@@ -33,7 +33,7 @@ class ProcessClient:
             sandbox: Sandbox ID or object.
             command: Shell command to execute.
             cwd: Working directory.
-            timeout: Timeout in seconds (default 30).
+            timeout: Timeout in seconds. If omitted, the server-side default is used.
 
         Returns:
             ProcessResult: Command result including exit code, stdout, and stderr.

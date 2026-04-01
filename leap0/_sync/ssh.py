@@ -80,13 +80,13 @@ class SshClient:
     @intercept_errors("Failed to regenerate SSH access: ")
     def regenerate_access(self, sandbox: SandboxRef, http_timeout: float | None = None) -> SshAccess:
         """Invalidate the current credential and generate a new one. The expiry is also reset.
-        
-                Args:
-                    sandbox: Sandbox ID or object.
-                    http_timeout: Optional HTTP request timeout in seconds for this SDK call.
-        
+
+        Args:
+            sandbox: Sandbox ID or object.
+            http_timeout: Optional HTTP request timeout in seconds for this SDK call.
+
         Returns:
-            object: Result returned by this operation.
+            SshAccess: Newly generated SSH credential bundle.
         """
         data = self._transport.request_json("POST", f"/v1/sandbox/{sandbox_id_of(sandbox)}/ssh/regen", timeout=http_timeout)
         return SshAccess.from_dict(cast(dict, data))

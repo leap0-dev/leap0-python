@@ -104,6 +104,8 @@ class Leap0Client:
             auth_header=config.auth_header,
             bearer=config.bearer,
         )
+        self._owns_tracer_provider = False
+        self._owns_meter_provider = False
         self.sandboxes: SandboxesClient[Sandbox] = SandboxesClient(
             self._transport,
             sandbox_domain=config.sandbox_domain,
@@ -127,17 +129,30 @@ class Leap0Client:
             self._init_otel()
 
     def _init_otel(self) -> None:
+        self._owns_tracer_provider = False
+        self._owns_meter_provider = False
         resource = Resource.create(
             {
                 service_attributes.SERVICE_NAME: "leap0-python-sdk",
                 service_attributes.SERVICE_VERSION: self._transport.headers().get("Leap0-SDK-Version", "unknown"),
             }
         )
-        self._tracer_provider = TracerProvider(resource=resource)
-        self._tracer_provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter()))
-        trace.set_tracer_provider(self._tracer_provider)
-        self._meter_provider = MeterProvider(resource=resource)
-        metrics.set_meter_provider(self._meter_provider)
+        current_tracer_provider = trace.get_tracer_provider()
+        if not isinstance(current_tracer_provider, TracerProvider):
+            self._tracer_provider = TracerProvider(resource=resource)
+            self._tracer_provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter()))
+            trace.set_tracer_provider(self._tracer_provider)
+            self._owns_tracer_provider = True
+        else:
+            self._tracer_provider = current_tracer_provider
+
+        current_meter_provider = metrics.get_meter_provider()
+        if not isinstance(current_meter_provider, MeterProvider):
+            self._meter_provider = MeterProvider(resource=resource)
+            metrics.set_meter_provider(self._meter_provider)
+            self._owns_meter_provider = True
+        else:
+            self._meter_provider = current_meter_provider
 
     @with_instrumentation("client.get_sandbox")
     def get_sandbox(self, sandbox_id: str) -> Sandbox:
@@ -171,9 +186,9 @@ class Leap0Client:
         context manager.
         """
         self._transport.close()
-        if self._tracer_provider is not None:
+        if self._owns_tracer_provider and self._tracer_provider is not None:
             self._tracer_provider.shutdown()
-        if self._meter_provider is not None:
+        if self._owns_meter_provider and self._meter_provider is not None:
             self._meter_provider.shutdown()
 
     def __enter__(self) -> Self:

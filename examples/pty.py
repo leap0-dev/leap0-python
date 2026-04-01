@@ -25,8 +25,10 @@ def main() -> None:
         finally:
             connection.close()
     finally:
-        sandbox.delete()
-        client.close()
+        try:
+            sandbox.delete()
+        finally:
+            client.close()
 
 
 if __name__ == "__main__":

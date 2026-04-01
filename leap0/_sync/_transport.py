@@ -151,13 +151,12 @@ class Transport:
         timeout: float | None = None,
     ) -> httpx.Response:
         effective = timeout if timeout is not None else (self._timeout_override.get() or self.timeout)
-        timeout_dict = {"connect": effective, "read": effective, "write": effective, "pool": effective}
         request = self._client.build_request(
             method,
             self._target_url(target),
             json=json,
             headers=self.headers(),
-            extensions={"timeout": timeout_dict},
+            timeout=httpx.Timeout(effective),
         )
         response = self._client.send(request, stream=True)
         if response.status_code >= 400:
@@ -207,7 +206,7 @@ class Transport:
             content=content,
             files=files,
             headers=actual_headers,
-            timeout=timeout or self.timeout,
+            timeout=timeout or self._timeout_override.get() or self.timeout,
         )
         return self._check_response(response, method, path, expected_status)
 
@@ -260,6 +259,7 @@ class Transport:
         params: JsonObject | None = None,
         json: JsonObject | None = None,
         expected_status: int | tuple[int, ...] = 200,
+        timeout: float | None = None,
     ) -> httpx.Response:
         """Send a request to an absolute URL (e.g. sandbox-domain URLs).
         
@@ -273,7 +273,14 @@ class Transport:
         Returns:
             object: Result returned by this operation.
         """
-        return self._request(method, target, params=params, json=json, expected_status=expected_status)
+        return self._request(
+            method,
+            target,
+            params=params,
+            json=json,
+            expected_status=expected_status,
+            timeout=timeout,
+        )
 
     @with_instrumentation("transport.request_target_json")
     def request_target_json(
@@ -284,6 +291,7 @@ class Transport:
         params: JsonObject | None = None,
         json: JsonObject | None = None,
         expected_status: int | tuple[int, ...] = 200,
+        timeout: float | None = None,
     ) -> JsonObject:
         """Send a request to an absolute URL and return parsed JSON.
         
@@ -297,7 +305,14 @@ class Transport:
         Returns:
             object: Result returned by this operation.
         """
-        resp = self._request(method, target, params=params, json=json, expected_status=expected_status)
+        resp = self._request(
+            method,
+            target,
+            params=params,
+            json=json,
+            expected_status=expected_status,
+            timeout=timeout,
+        )
         return resp.json()
 
     def stream(self, method: str, target: str, *, json: JsonObject | None = None, timeout: float | None = None) -> httpx.Response:

@@ -20,8 +20,10 @@ def main() -> None:
         ):
             print(event)
     finally:
-        sandbox.delete()
-        client.close()
+        try:
+            sandbox.delete()
+        finally:
+            client.close()
 
 
 if __name__ == "__main__":
