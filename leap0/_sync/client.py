@@ -44,8 +44,9 @@ from .templates import TemplatesClient
 class Leap0Client:
     """Top-level client for the Leap0 API.
 
-    Use this client to create sandboxes and access all service clients. It can
-    be used directly or as a context manager.
+    Use this client to create sandboxes and access top-level control-plane
+    services. Sandbox-scoped services are exposed through bound sandbox objects.
+    It can be used directly or as a context manager.
 
     Args:
         api_key: API key for authentication. Falls back to ``LEAP0_API_KEY``.
@@ -60,14 +61,6 @@ class Leap0Client:
         sandboxes: Client for sandbox lifecycle operations.
         snapshots: Client for snapshot lifecycle operations.
         templates: Client for template management.
-        filesystem: Client for sandbox filesystem operations.
-        git: Client for Git operations inside a sandbox.
-        process: Client for one-shot process execution.
-        pty: Client for interactive PTY sessions.
-        lsp: Client for Language Server Protocol operations.
-        ssh: Client for SSH credential management.
-        code_interpreter: Client for code execution APIs.
-        desktop: Client for desktop automation APIs.
     """
     DEFAULT_BASE_URL = DEFAULT_BASE_URL
     DEFAULT_SANDBOX_DOMAIN = DEFAULT_SANDBOX_DOMAIN
@@ -129,14 +122,14 @@ class Leap0Client:
             sandbox_factory=lambda data: Sandbox(self, data),
         )
         self.templates = TemplatesClient(self._transport)
-        self.filesystem = FilesystemClient(self._transport)
-        self.git = GitClient(self._transport)
-        self.process = ProcessClient(self._transport)
-        self.pty = PtyClient(self._transport)
-        self.lsp = LspClient(self._transport)
-        self.ssh = SshClient(self._transport)
-        self.code_interpreter = CodeInterpreterClient(self._transport, sandbox_domain=config.sandbox_domain)
-        self.desktop = DesktopClient(self._transport, sandbox_domain=config.sandbox_domain)
+        self._filesystem = FilesystemClient(self._transport)
+        self._git = GitClient(self._transport)
+        self._process = ProcessClient(self._transport)
+        self._pty = PtyClient(self._transport)
+        self._lsp = LspClient(self._transport)
+        self._ssh = SshClient(self._transport)
+        self._code_interpreter = CodeInterpreterClient(self._transport, sandbox_domain=config.sandbox_domain)
+        self._desktop = DesktopClient(self._transport, sandbox_domain=config.sandbox_domain)
 
         if config.sdk_otel_enabled:
             self._init_otel()
@@ -167,6 +160,14 @@ class Leap0Client:
             self._owns_meter_provider = True
         else:
             self._meter_provider = current_meter_provider
+
+    def __getattr__(self, name: str) -> object:
+        if name in {"filesystem", "git", "process", "pty", "lsp", "ssh", "code_interpreter", "desktop"}:
+            raise AttributeError(
+                f"{type(self).__name__!s} has no attribute {name!r}; use a bound sandbox handle instead, "
+                f"for example sandbox.{name}"
+            )
+        raise AttributeError(f"{type(self).__name__!s} has no attribute {name!r}")
 
     @with_instrumentation("client.get_sandbox")
     def get_sandbox(self, sandbox_id: str) -> Sandbox:

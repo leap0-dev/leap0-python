@@ -27,8 +27,8 @@ class TestAsyncSandboxesClient:
     def test_factory_returns_async_sandbox(self, async_mock_transport):
         async def run() -> None:
             fake_client = SimpleNamespace(
-                filesystem=SimpleNamespace(), git=SimpleNamespace(), process=SimpleNamespace(), pty=SimpleNamespace(),
-                lsp=SimpleNamespace(), ssh=SimpleNamespace(), code_interpreter=SimpleNamespace(), desktop=SimpleNamespace(),
+                _filesystem=SimpleNamespace(), _git=SimpleNamespace(), _process=SimpleNamespace(), _pty=SimpleNamespace(),
+                _lsp=SimpleNamespace(), _ssh=SimpleNamespace(), _code_interpreter=SimpleNamespace(), _desktop=SimpleNamespace(),
             )
             client = AsyncSandboxesClient(async_mock_transport, sandbox_domain="s.dev", sandbox_factory=lambda data: AsyncSandbox(fake_client, data))
             async_mock_transport.request_json.return_value = {

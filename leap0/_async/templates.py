@@ -4,6 +4,7 @@ from typing import cast
 
 from ..models.template import (
     CreateTemplateParams,
+    RegistryCredentials,
     RegistryCredentialsDict,
     RenameTemplateParams,
     Template,
@@ -36,7 +37,7 @@ class AsyncTemplatesClient:
         self._transport = transport
 
     @intercept_errors("Failed to create template: ")
-    async def create(self, *, name: str, uri: str, credentials: RegistryCredentialsDict | None = None) -> Template:
+    async def create(self, *, name: str, uri: str, credentials: RegistryCredentials | RegistryCredentialsDict | None = None) -> Template:
         """Upload a new template from a container image URI.
 
         Args:

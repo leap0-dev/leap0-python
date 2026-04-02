@@ -25,8 +25,7 @@ class CodeInterpreterClient:
     
         Example:
             ```python
-            result = client.code_interpreter.execute(
-                sandbox,
+            result = sandbox.code_interpreter.execute(
                 code="sum([1, 2, 3])",
                 language="python",
             )

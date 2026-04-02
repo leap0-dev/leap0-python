@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from leap0.models.sandbox import Sandbox, SandboxStatus, sandbox_id_of
 
 
@@ -14,6 +16,13 @@ class TestSandboxIdOf:
         s = SandboxStatus(id="sbx-xyz", template_id="t", vcpu=1, memory_mib=512,
                           disk_mib=10240, state="running", auto_pause=False, created_at="")
         assert sandbox_id_of(s) == "sbx-xyz"
+
+    def test_rejects_unrelated_object_with_id(self):
+        class FakeSandbox:
+            id = "sbx-fake"
+
+        with pytest.raises(TypeError, match="sandbox must be"):
+            sandbox_id_of(FakeSandbox())
 
 
 class TestSandbox:
@@ -41,6 +50,5 @@ class TestSandboxStatus:
         assert s.vcpu == 4
 
     def test_empty_dict_raises(self):
-        import pytest
         with pytest.raises(ValueError, match="missing required non-empty string 'id'"):
             SandboxStatus.from_dict({})

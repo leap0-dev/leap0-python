@@ -94,8 +94,7 @@ class AsyncFilesystemClient:
             http_timeout: Optional HTTP request timeout in seconds for this SDK call.
         Example:
             ```python
-            await client.filesystem.write_bytes(
-                sandbox,
+            await sandbox.filesystem.write_bytes(
                 path="/workspace/logo.png",
                 content=image_bytes,
             )
@@ -128,8 +127,7 @@ class AsyncFilesystemClient:
             http_timeout: Optional HTTP request timeout in seconds for this SDK call.
         Example:
             ```python
-            await client.filesystem.write_file(
-                sandbox,
+            await sandbox.filesystem.write_file(
                 path="/workspace/app.py",
                 content="print('hello')\n",
             )
@@ -154,8 +152,7 @@ class AsyncFilesystemClient:
             http_timeout: Optional HTTP request timeout in seconds for this SDK call.
         Example:
             ```python
-            await client.filesystem.write_files_bytes(
-                sandbox,
+            await sandbox.filesystem.write_files_bytes(
                 files={"/workspace/a.bin": b"a", "/workspace/b.bin": b"b"},
             )
             ```

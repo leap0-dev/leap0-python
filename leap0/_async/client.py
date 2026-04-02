@@ -71,20 +71,13 @@ def _reset_meter_provider_if_current(provider: MeterProvider) -> None:
 class AsyncLeap0Client:
     """Top-level asynchronous client for the Leap0 API.
 
-    Use this client to create sandboxes and access all async service clients.
+    Use this client to create sandboxes and access top-level control-plane
+    services. Sandbox-scoped services are exposed through bound sandbox objects.
 
     Attributes:
         sandboxes: Client for sandbox lifecycle operations.
         snapshots: Client for snapshot lifecycle operations.
         templates: Client for template management.
-        filesystem: Client for sandbox filesystem operations.
-        git: Client for Git operations inside a sandbox.
-        process: Client for one-shot process execution.
-        pty: Client for interactive PTY sessions.
-        lsp: Client for Language Server Protocol operations.
-        ssh: Client for SSH credential management.
-        code_interpreter: Client for code execution APIs.
-        desktop: Client for desktop automation APIs.
     """
     DEFAULT_BASE_URL = DEFAULT_BASE_URL
     DEFAULT_SANDBOX_DOMAIN = DEFAULT_SANDBOX_DOMAIN
@@ -155,14 +148,14 @@ class AsyncLeap0Client:
             sandbox_factory=lambda data: AsyncSandbox(self, data),
         )
         self.templates = AsyncTemplatesClient(self._transport)
-        self.filesystem = AsyncFilesystemClient(self._transport)
-        self.git = AsyncGitClient(self._transport)
-        self.process = AsyncProcessClient(self._transport)
-        self.pty = AsyncPtyClient(self._transport)
-        self.lsp = AsyncLspClient(self._transport)
-        self.ssh = AsyncSshClient(self._transport)
-        self.code_interpreter = AsyncCodeInterpreterClient(self._transport, sandbox_domain=config.sandbox_domain)
-        self.desktop = AsyncDesktopClient(self._transport, sandbox_domain=config.sandbox_domain)
+        self._filesystem = AsyncFilesystemClient(self._transport)
+        self._git = AsyncGitClient(self._transport)
+        self._process = AsyncProcessClient(self._transport)
+        self._pty = AsyncPtyClient(self._transport)
+        self._lsp = AsyncLspClient(self._transport)
+        self._ssh = AsyncSshClient(self._transport)
+        self._code_interpreter = AsyncCodeInterpreterClient(self._transport, sandbox_domain=config.sandbox_domain)
+        self._desktop = AsyncDesktopClient(self._transport, sandbox_domain=config.sandbox_domain)
 
         if config.sdk_otel_enabled:
             self._init_otel()
@@ -208,6 +201,14 @@ class AsyncLeap0Client:
                 _shared_meter_refcount += 1
                 self._meter_provider = _shared_meter_provider
                 self._uses_shared_meter_provider = True
+
+    def __getattr__(self, name: str) -> object:
+        if name in {"filesystem", "git", "process", "pty", "lsp", "ssh", "code_interpreter", "desktop"}:
+            raise AttributeError(
+                f"{type(self).__name__!s} has no attribute {name!r}; use a bound sandbox handle instead, "
+                f"for example sandbox.{name}"
+            )
+        raise AttributeError(f"{type(self).__name__!s} has no attribute {name!r}")
 
     @with_instrumentation("async_client.get_sandbox")
     async def get_sandbox(self, sandbox_id: str) -> AsyncSandbox:

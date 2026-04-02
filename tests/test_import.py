@@ -14,8 +14,11 @@ from leap0 import (
     AsyncSnapshotsClient,
     AsyncSshClient,
     AsyncTemplatesClient,
+    AwsRegistryCredentials,
     AwsRegistryCredentialsDict,
+    AzureRegistryCredentials,
     AzureRegistryCredentialsDict,
+    BasicRegistryCredentials,
     BasicRegistryCredentialsDict,
     CreatePtySessionParams,
     CreateSandboxParams,
@@ -24,6 +27,7 @@ from leap0 import (
     DEFAULT_CODE_INTERPRETER_TEMPLATE_NAME,
     DEFAULT_TEMPLATE_NAME,
     FilesystemClient,
+    GcpRegistryCredentials,
     GcpRegistryCredentialsDict,
     GitClient,
     Leap0Client,
@@ -69,9 +73,13 @@ def test_service_client_imports() -> None:
     assert AsyncSshClient is not None
     assert AsyncTemplatesClient is not None
     assert AsyncPtyConnection is not None
+    assert BasicRegistryCredentials is not None
     assert BasicRegistryCredentialsDict is not None
+    assert AwsRegistryCredentials is not None
     assert AwsRegistryCredentialsDict is not None
+    assert GcpRegistryCredentials is not None
     assert GcpRegistryCredentialsDict is not None
+    assert AzureRegistryCredentials is not None
     assert AzureRegistryCredentialsDict is not None
     assert CreateSandboxParams is not None
     assert CreateSnapshotParams is not None

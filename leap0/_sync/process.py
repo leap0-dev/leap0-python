@@ -41,8 +41,7 @@ class ProcessClient:
 
         Example:
             ```python
-            result = client.process.execute(
-                sandbox,
+            result = sandbox.process.execute(
                 command="ls -la /workspace",
             )
             print(result.stdout)
