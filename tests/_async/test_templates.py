@@ -27,3 +27,24 @@ class TestAsyncTemplatesClient:
             assert async_mock_transport.request.call_args[1]["expected_status"] == 204
 
         asyncio.run(run())
+
+    def test_create_passes_registry_credentials(self, async_mock_transport):
+        async def run() -> None:
+            async_mock_transport.request_json.return_value = {
+                "id": "tpl-1", "name": "my-tpl", "digest": "sha256:abc",
+                "image_config": None, "is_system": False, "created_at": "",
+            }
+            await AsyncTemplatesClient(async_mock_transport).create(
+                name="my-tpl",
+                uri="registry.azurecr.io/app:latest",
+                credentials={
+                    "type": "azure",
+                    "azure_client_id": "client-id",
+                    "azure_client_secret": "client-secret",
+                    "azure_tenant_id": "tenant-id",
+                },
+            )
+            payload = async_mock_transport.request_json.call_args.kwargs["json"]["credentials"]
+            assert payload["type"] == "azure"
+
+        asyncio.run(run())

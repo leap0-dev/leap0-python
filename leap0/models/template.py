@@ -2,8 +2,27 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
+from typing import TypeAlias
 from pydantic import BaseModel, ConfigDict, model_validator
-from .._schemas.template import AwsRegistryCredentialsDict, AzureRegistryCredentialsDict, BasicRegistryCredentialsDict, GcpRegistryCredentialsDict, ImageConfigDict, RegistryCredentialsDict, UploadTemplateResponseDict
+from .._schemas.template import (
+    AwsRegistryCredentialsDict as _AwsRegistryCredentialsDict,
+    AzureRegistryCredentialsDict as _AzureRegistryCredentialsDict,
+    BasicRegistryCredentialsDict as _BasicRegistryCredentialsDict,
+    GcpRegistryCredentialsDict as _GcpRegistryCredentialsDict,
+    ImageConfigDict,
+    UploadTemplateResponseDict,
+)
+
+BasicRegistryCredentialsDict: TypeAlias = _BasicRegistryCredentialsDict
+AwsRegistryCredentialsDict: TypeAlias = _AwsRegistryCredentialsDict
+GcpRegistryCredentialsDict: TypeAlias = _GcpRegistryCredentialsDict
+AzureRegistryCredentialsDict: TypeAlias = _AzureRegistryCredentialsDict
+RegistryCredentialsDict: TypeAlias = (
+    BasicRegistryCredentialsDict
+    | AwsRegistryCredentialsDict
+    | GcpRegistryCredentialsDict
+    | AzureRegistryCredentialsDict
+)
 
 class RegistryCredentialType(str, Enum):
     """Supported container registry credential types."""

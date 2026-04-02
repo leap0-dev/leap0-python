@@ -82,7 +82,11 @@ if TYPE_CHECKING:
     from .models.snapshot import CreateSnapshotParams, ResumeSnapshotParams, Snapshot, snapshot_id_of
     from .models.ssh import SshAccess, SshValidation
     from .models.template import (
+        AwsRegistryCredentialsDict,
+        AzureRegistryCredentialsDict,
+        BasicRegistryCredentialsDict,
         CreateTemplateParams,
+        GcpRegistryCredentialsDict,
         ImageConfig,
         RegistryCredentialType,
         RegistryCredentialsDict,
@@ -117,6 +121,9 @@ __all__ = [
     "AsyncSnapshotsClient",
     "AsyncSshClient",
     "AsyncTemplatesClient",
+    "AwsRegistryCredentialsDict",
+    "AzureRegistryCredentialsDict",
+    "BasicRegistryCredentialsDict",
     "CodeContext",
     "CodeExecutionError",
     "CodeExecutionOutput",
@@ -266,6 +273,10 @@ _DYNAMIC_IMPORTS: dict[str, tuple[str, str]] = {
     "SshAccess": (".models.ssh", "SshAccess"),
     "SshValidation": (".models.ssh", "SshValidation"),
     "CreateTemplateParams": (".models.template", "CreateTemplateParams"),
+    "BasicRegistryCredentialsDict": (".models.template", "BasicRegistryCredentialsDict"),
+    "AwsRegistryCredentialsDict": (".models.template", "AwsRegistryCredentialsDict"),
+    "GcpRegistryCredentialsDict": (".models.template", "GcpRegistryCredentialsDict"),
+    "AzureRegistryCredentialsDict": (".models.template", "AzureRegistryCredentialsDict"),
     "ImageConfig": (".models.template", "ImageConfig"),
     "RegistryCredentialType": (".models.template", "RegistryCredentialType"),
     "RegistryCredentialsDict": (".models.template", "RegistryCredentialsDict"),
@@ -305,3 +316,4 @@ def __getattr__(name: str) -> object:
 
 def __dir__() -> list[str]:
     return sorted(__all__)
+    "GcpRegistryCredentialsDict",
