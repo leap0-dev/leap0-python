@@ -52,7 +52,7 @@ class TestLeap0Client:
     def test_creates_with_key(self):
         client = Leap0Client(api_key="test-key")
         assert client.sandboxes is not None
-        with pytest.raises(AttributeError, match="sandbox.filesystem"):
+        with pytest.raises(AttributeError, match=r"sandbox\.filesystem"):
             _ = client.filesystem
         client.close()
 
