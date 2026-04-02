@@ -16,6 +16,12 @@ class SandboxFactory(Protocol[SandboxModelT, SandboxReturnT]):
     def __call__(self, data: SandboxModelT) -> SandboxReturnT: ...
 
 
+class SandboxHandle:
+    """Nominal base type for SDK sandbox references."""
+
+    id: str
+
+
 class SyncSandboxService(Protocol):
     """Protocol for sandbox-bound synchronous service callables."""
     def __call__(self, sandbox: object, *args: object, **kwargs: object) -> object: ...

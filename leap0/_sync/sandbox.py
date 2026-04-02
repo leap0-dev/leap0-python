@@ -5,7 +5,7 @@ from functools import wraps
 from typing import Generic, Protocol, TypeVar, cast
 
 from ..constants import OTEL_EXPORTER_OTLP_ENDPOINT_ENV, OTEL_EXPORTER_OTLP_HEADERS_ENV
-from .._internal.types import SandboxFactory
+from .._internal.types import SandboxFactory, SandboxHandle
 from ..models.config import (
     DEFAULT_MEMORY_MIB,
     DEFAULT_TEMPLATE_NAME,
@@ -52,7 +52,7 @@ class _SandboxServiceProxy:
         return bound
 
 
-class Sandbox:
+class Sandbox(SandboxHandle):
     """Sandbox object with bound service clients.
 
     This object exposes sandbox metadata directly and provides bound service
@@ -73,14 +73,14 @@ class Sandbox:
     def __init__(self, client: object, data: SandboxData | SandboxStatus):
         self._client = client
         self._data: SandboxData | SandboxStatus = data
-        self.filesystem = _SandboxServiceProxy(client.filesystem, self)
-        self.git = _SandboxServiceProxy(client.git, self)
-        self.process = _SandboxServiceProxy(client.process, self)
-        self.pty = _SandboxServiceProxy(client.pty, self)
-        self.lsp = _SandboxServiceProxy(client.lsp, self)
-        self.ssh = _SandboxServiceProxy(client.ssh, self)
-        self.code_interpreter = _SandboxServiceProxy(client.code_interpreter, self)
-        self.desktop = _SandboxServiceProxy(client.desktop, self)
+        self.filesystem = _SandboxServiceProxy(client._filesystem, self)
+        self.git = _SandboxServiceProxy(client._git, self)
+        self.process = _SandboxServiceProxy(client._process, self)
+        self.pty = _SandboxServiceProxy(client._pty, self)
+        self.lsp = _SandboxServiceProxy(client._lsp, self)
+        self.ssh = _SandboxServiceProxy(client._ssh, self)
+        self.code_interpreter = _SandboxServiceProxy(client._code_interpreter, self)
+        self.desktop = _SandboxServiceProxy(client._desktop, self)
 
     def __getattr__(self, name: str) -> object:
         return getattr(self._data, name)

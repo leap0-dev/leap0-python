@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Protocol
+from typing import TypeAlias
 
 from pydantic import BaseModel, ConfigDict, model_validator
 
+from .._internal.types import SandboxHandle
 from .._internal.types import JsonObject
 from .._schemas.sandbox import NetworkPolicyDict, SandboxCreateResponseDict, SandboxStatusResponseDict, TransformRuleDict
 from .config import DEFAULT_MEMORY_MIB, DEFAULT_TEMPLATE_NAME, DEFAULT_TIMEOUT_MIN, DEFAULT_VCPU
@@ -65,7 +66,7 @@ class CreateSandboxParams(BaseModel):
 CreateSandboxParams.model_rebuild(_types_namespace={"NetworkPolicyMode": NetworkPolicyMode})
 
 @dataclass(slots=True)
-class Sandbox:
+class Sandbox(SandboxHandle):
     """Sandbox model returned by sandbox creation APIs."""
     id: str
     template_id: str = ""
@@ -97,7 +98,7 @@ class Sandbox:
         )
 
 @dataclass(slots=True)
-class SandboxStatus:
+class SandboxStatus(SandboxHandle):
     """Current status snapshot for a sandbox."""
     id: str
     template_id: str
@@ -126,12 +127,7 @@ class SandboxStatus:
             created_at=data.get("created_at", ""),
         )
 
-class SandboxIdentifiable(Protocol):
-    """Protocol for objects exposing a sandbox ID."""
-    id: str
-
-
-SandboxRef = str | SandboxIdentifiable
+SandboxRef: TypeAlias = str | SandboxHandle
 
 def _parse_sandbox_state(value: SandboxState | str | None) -> SandboxState | str:
     if value is None:
@@ -145,4 +141,7 @@ def sandbox_id_of(value: SandboxRef) -> str:
     """Return the sandbox ID for a sandbox reference."""
     if isinstance(value, str):
         return value
-    return str(value.id)
+    if isinstance(value, SandboxHandle):
+        return value.id
+
+    raise TypeError("sandbox must be a sandbox id or SDK sandbox handle")

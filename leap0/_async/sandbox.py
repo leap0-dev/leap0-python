@@ -6,7 +6,7 @@ from functools import wraps
 from typing import TYPE_CHECKING, Generic, Protocol, TypeVar, cast
 
 from ..constants import OTEL_EXPORTER_OTLP_ENDPOINT_ENV, OTEL_EXPORTER_OTLP_HEADERS_ENV
-from .._internal.types import SandboxFactory
+from .._internal.types import SandboxFactory, SandboxHandle
 from ..models.config import (
     DEFAULT_MEMORY_MIB,
     DEFAULT_TEMPLATE_NAME,
@@ -60,7 +60,7 @@ class _AsyncBoundSandboxCallable(Protocol):
     async def __call__(self, sandbox: object, *args: object, **kwargs: object) -> object: ...
 
 
-class AsyncSandbox:
+class AsyncSandbox(SandboxHandle):
     """Sandbox object with bound asynchronous service clients.
 
     Attributes:
@@ -76,14 +76,14 @@ class AsyncSandbox:
     def __init__(self, client: "AsyncLeap0Client", data: SandboxData | SandboxStatus):
         self._client: "AsyncLeap0Client" = client
         self._data: SandboxData | SandboxStatus = data
-        self.filesystem = _AsyncSandboxServiceProxy(client.filesystem, self)
-        self.git = _AsyncSandboxServiceProxy(client.git, self)
-        self.process = _AsyncSandboxServiceProxy(client.process, self)
-        self.pty = _AsyncSandboxServiceProxy(client.pty, self)
-        self.lsp = _AsyncSandboxServiceProxy(client.lsp, self)
-        self.ssh = _AsyncSandboxServiceProxy(client.ssh, self)
-        self.code_interpreter = _AsyncSandboxServiceProxy(client.code_interpreter, self)
-        self.desktop = _AsyncSandboxServiceProxy(client.desktop, self)
+        self.filesystem = _AsyncSandboxServiceProxy(client._filesystem, self)
+        self.git = _AsyncSandboxServiceProxy(client._git, self)
+        self.process = _AsyncSandboxServiceProxy(client._process, self)
+        self.pty = _AsyncSandboxServiceProxy(client._pty, self)
+        self.lsp = _AsyncSandboxServiceProxy(client._lsp, self)
+        self.ssh = _AsyncSandboxServiceProxy(client._ssh, self)
+        self.code_interpreter = _AsyncSandboxServiceProxy(client._code_interpreter, self)
+        self.desktop = _AsyncSandboxServiceProxy(client._desktop, self)
 
     def __getattr__(self, name: str) -> object:
         return getattr(self._data, name)

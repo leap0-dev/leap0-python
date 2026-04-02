@@ -22,6 +22,12 @@ def test_async_client_native_transport(monkeypatch):
 
     async def run() -> None:
         client = AsyncLeap0Client(api_key="test")
+        try:
+            _ = client.filesystem
+        except AttributeError as exc:
+            assert "sandbox.filesystem" in str(exc)
+        else:
+            raise AssertionError("expected sandbox-scoped service access to fail")
 
         async def fake_get(_sandbox_id: str) -> AsyncSandbox:
             return AsyncSandbox(client, Sandbox(id="sbx-1", state="running"))

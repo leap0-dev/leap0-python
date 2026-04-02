@@ -47,14 +47,14 @@ class TestSandboxesClient:
 
     def test_factory_returns_rich_sandbox(self, mock_transport):
         fake_client = SimpleNamespace(
-            filesystem=MagicMock(),
-            git=MagicMock(),
-            process=MagicMock(),
-            pty=MagicMock(),
-            lsp=MagicMock(),
-            ssh=MagicMock(),
-            code_interpreter=MagicMock(),
-            desktop=MagicMock(),
+            _filesystem=MagicMock(),
+            _git=MagicMock(),
+            _process=MagicMock(),
+            _pty=MagicMock(),
+            _lsp=MagicMock(),
+            _ssh=MagicMock(),
+            _code_interpreter=MagicMock(),
+            _desktop=MagicMock(),
         )
         client = SandboxesClient(
             mock_transport,
@@ -142,14 +142,14 @@ class TestRichSandbox:
         process.execute.return_value = MagicMock(stdout="Python 3.12")
         sandboxes = MagicMock()
         client = SimpleNamespace(
-            filesystem=MagicMock(),
-            git=MagicMock(),
-            process=process,
-            pty=MagicMock(),
-            lsp=MagicMock(),
-            ssh=MagicMock(),
-            code_interpreter=MagicMock(),
-            desktop=MagicMock(),
+            _filesystem=MagicMock(),
+            _git=MagicMock(),
+            _process=process,
+            _pty=MagicMock(),
+            _lsp=MagicMock(),
+            _ssh=MagicMock(),
+            _code_interpreter=MagicMock(),
+            _desktop=MagicMock(),
             sandboxes=sandboxes,
         )
 
@@ -162,14 +162,14 @@ class TestRichSandbox:
     def test_refresh_updates_metadata(self):
         sandboxes = MagicMock()
         client = SimpleNamespace(
-            filesystem=MagicMock(),
-            git=MagicMock(),
-            process=MagicMock(),
-            pty=MagicMock(),
-            lsp=MagicMock(),
-            ssh=MagicMock(),
-            code_interpreter=MagicMock(),
-            desktop=MagicMock(),
+            _filesystem=MagicMock(),
+            _git=MagicMock(),
+            _process=MagicMock(),
+            _pty=MagicMock(),
+            _lsp=MagicMock(),
+            _ssh=MagicMock(),
+            _code_interpreter=MagicMock(),
+            _desktop=MagicMock(),
             sandboxes=sandboxes,
         )
         sandbox = RichSandbox(client, Sandbox(id="sbx-1", state="starting"))

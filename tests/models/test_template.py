@@ -1,6 +1,17 @@
 from __future__ import annotations
 
-from leap0.models.template import CreateTemplateParams, ImageConfig, RegistryCredentialType, Template
+import pytest
+
+from leap0.models.template import (
+    AwsRegistryCredentials,
+    AzureRegistryCredentials,
+    BasicRegistryCredentials,
+    CreateTemplateParams,
+    GcpRegistryCredentials,
+    ImageConfig,
+    RegistryCredentialType,
+    Template,
+)
 
 
 class TestImageConfig:
@@ -40,7 +51,8 @@ class TestCreateTemplateParams:
                 "password": "my-password",
             },
         )
-        assert params.credentials["type"] == RegistryCredentialType.BASIC
+        assert isinstance(params.credentials, BasicRegistryCredentials)
+        assert params.credentials.type == "basic"
 
     def test_accepts_aws_registry_credentials(self):
         params = CreateTemplateParams(
@@ -53,7 +65,8 @@ class TestCreateTemplateParams:
                 "aws_region": "us-east-1",
             },
         )
-        assert params.credentials["type"] == RegistryCredentialType.AWS
+        assert isinstance(params.credentials, AwsRegistryCredentials)
+        assert params.credentials.type == "aws"
 
     def test_accepts_gcp_registry_credentials(self):
         params = CreateTemplateParams(
@@ -64,7 +77,8 @@ class TestCreateTemplateParams:
                 "gcp_service_account_json": '{"type":"service_account"}',
             },
         )
-        assert params.credentials["type"] == RegistryCredentialType.GCP
+        assert isinstance(params.credentials, GcpRegistryCredentials)
+        assert params.credentials.type == "gcp"
 
     def test_accepts_azure_registry_credentials(self):
         params = CreateTemplateParams(
@@ -77,4 +91,16 @@ class TestCreateTemplateParams:
                 "azure_tenant_id": "tenant-id",
             },
         )
-        assert params.credentials["type"] == RegistryCredentialType.AZURE
+        assert isinstance(params.credentials, AzureRegistryCredentials)
+        assert params.credentials.type == "azure"
+
+    def test_rejects_incomplete_basic_registry_credentials(self):
+        with pytest.raises(ValueError, match="password"):
+            CreateTemplateParams(
+                name="private-basic",
+                uri="registry.example.com/org/app:latest",
+                credentials={
+                    "type": RegistryCredentialType.BASIC,
+                    "username": "my-user",
+                },
+            )

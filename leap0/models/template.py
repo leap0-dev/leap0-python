@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import TypeAlias
-from pydantic import BaseModel, ConfigDict, model_validator
+from typing import Annotated, Literal, TypeAlias
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from .._schemas.template import (
     AwsRegistryCredentialsDict as _AwsRegistryCredentialsDict,
     AzureRegistryCredentialsDict as _AzureRegistryCredentialsDict,
@@ -24,6 +25,13 @@ RegistryCredentialsDict: TypeAlias = (
     | AzureRegistryCredentialsDict
 )
 
+
+class _RegistryCredentialsBase(BaseModel):
+    """Validated registry credentials."""
+
+    model_config = ConfigDict(extra="forbid")
+
+
 class RegistryCredentialType(str, Enum):
     """Supported container registry credential types."""
     BASIC = "basic"
@@ -31,13 +39,65 @@ class RegistryCredentialType(str, Enum):
     GCP = "gcp"
     AZURE = "azure"
 
+
+class BasicRegistryCredentials(_RegistryCredentialsBase):
+    """Validated basic-auth registry credentials."""
+
+    type: Literal["basic"] = RegistryCredentialType.BASIC.value
+    username: str
+    password: str
+
+
+class AwsRegistryCredentials(_RegistryCredentialsBase):
+    """Validated AWS registry credentials."""
+
+    type: Literal["aws"] = RegistryCredentialType.AWS.value
+    aws_access_key_id: str
+    aws_secret_access_key: str
+    aws_region: str | None = None
+
+
+class GcpRegistryCredentials(_RegistryCredentialsBase):
+    """Validated GCP registry credentials."""
+
+    type: Literal["gcp"] = RegistryCredentialType.GCP.value
+    gcp_service_account_json: str
+
+
+class AzureRegistryCredentials(_RegistryCredentialsBase):
+    """Validated Azure registry credentials."""
+
+    type: Literal["azure"] = RegistryCredentialType.AZURE.value
+    azure_client_id: str
+    azure_client_secret: str
+    azure_tenant_id: str
+
+
+RegistryCredentials: TypeAlias = Annotated[
+    BasicRegistryCredentials | AwsRegistryCredentials | GcpRegistryCredentials | AzureRegistryCredentials,
+    Field(discriminator="type"),
+]
+RegistryCredentialsInput: TypeAlias = RegistryCredentials | RegistryCredentialsDict
+
 class CreateTemplateParams(BaseModel):
     """Validated template creation parameters."""
     model_config = ConfigDict(extra="forbid")
 
     name: str
     uri: str
-    credentials: RegistryCredentialsDict | None = None
+    credentials: RegistryCredentials | None = None
+
+    @field_validator("credentials", mode="before")
+    @classmethod
+    def _normalize_credentials(cls, value: object) -> object:
+        if not isinstance(value, dict):
+            return value
+
+        normalized = dict(value)
+        credential_type = normalized.get("type")
+        if isinstance(credential_type, RegistryCredentialType):
+            normalized["type"] = credential_type.value
+        return normalized
 
     @model_validator(mode="after")
     def _validate_values(self) -> CreateTemplateParams:
@@ -61,7 +121,7 @@ class CreateTemplateParams(BaseModel):
 
     def to_payload(self) -> dict[str, object]:
         """Convert this object to an API request payload."""
-        return self.model_dump(exclude_none=True)
+        return self.model_dump(mode="json", exclude_none=True)
 
 class RenameTemplateParams(BaseModel):
     """Validated template rename parameters."""
@@ -86,10 +146,6 @@ class RenameTemplateParams(BaseModel):
     def to_payload(self) -> dict[str, str]:
         """Convert this object to an API request payload."""
         return {"name": self.name}
-
-
-CreateTemplateParams.model_rebuild(_types_namespace={"RegistryCredentialType": RegistryCredentialType})
-
 @dataclass(slots=True)
 class ImageConfig:
     """Container image configuration metadata."""
