@@ -65,7 +65,7 @@ ResumeSnapshotParams.model_rebuild(_types_namespace={"NetworkPolicyMode": Networ
 @dataclass(slots=True)
 class Snapshot:
     """Snapshot metadata returned by the API."""
-    snapshot_id: str
+    id: str
     name: str
     template_id: str = ""
     vcpu: int = 0
@@ -75,16 +75,11 @@ class Snapshot:
     network_policy: NetworkPolicyDict | None = None
     created_at: str = ""
 
-    @property
-    def id(self) -> str:
-        """Return the canonical identifier for this object."""
-        return self.snapshot_id
-
     @classmethod
     def from_dict(cls, data: SnapshotCreateResponseDict) -> Snapshot:
         """Build an instance from a wire-format dictionary."""
         return cls(
-            snapshot_id=data.get("snapshot_id", ""),
+            id=data.get("id", ""),
             name=data.get("name", ""),
             template_id=data.get("template_id", ""),
             vcpu=int(data.get("vcpu", 0)),
@@ -97,7 +92,7 @@ class Snapshot:
 
 class SnapshotIdentifiable(Protocol):
     """Protocol for objects exposing a snapshot ID."""
-    snapshot_id: str
+    id: str
 
 
 SnapshotRef = str | SnapshotIdentifiable
@@ -106,4 +101,4 @@ def snapshot_id_of(value: SnapshotRef) -> str:
     """Return the snapshot ID for a snapshot reference."""
     if isinstance(value, str):
         return value
-    return value.snapshot_id
+    return value.id

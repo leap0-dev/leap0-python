@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 class SnapshotCreateResponseDict(TypedDict, total=False):
     """Wire schema for snapshot creation responses."""
-    snapshot_id: str
+    id: str
     name: str
     template_id: str
     vcpu: int

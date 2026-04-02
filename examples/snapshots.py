@@ -16,7 +16,7 @@ def main() -> None:
         sandbox.filesystem.write_file(path="/workspace/checkpoint.txt", content="before snapshot\n")
 
         snapshot: Snapshot = client.snapshots.create(sandbox, name="example-checkpoint")
-        print("snapshot:", snapshot.snapshot_id)
+        print("snapshot:", snapshot.id)
 
         restored: Sandbox = client.snapshots.resume(snapshot_name=snapshot.name)
         try:

@@ -11,7 +11,7 @@ class TestAsyncSnapshotsClient:
     def test_create(self, async_mock_transport):
         async def run() -> None:
             async_mock_transport.request_json.return_value = {
-                "snapshot_id": "snap-1", "name": "s", "template_id": "t",
+                "id": "snap-1", "name": "s", "template_id": "t",
                 "vcpu": 1, "memory_mib": 512, "disk_mib": 10240, "network_policy": None, "created_at": "",
             }
             await AsyncSnapshotsClient(async_mock_transport).create("sbx-1", name="my-snap")
@@ -24,7 +24,7 @@ class TestAsyncSnapshotsClient:
     def test_delete_accepts_object(self, async_mock_transport):
         async def run() -> None:
             async_mock_transport.request.return_value = MagicMock(status_code=204)
-            await AsyncSnapshotsClient(async_mock_transport).delete(Snapshot(snapshot_id="snap-obj", name="n"))
+            await AsyncSnapshotsClient(async_mock_transport).delete(Snapshot(id="snap-obj", name="n"))
             assert "snap-obj" in async_mock_transport.request.call_args[0][1]
 
         asyncio.run(run())
