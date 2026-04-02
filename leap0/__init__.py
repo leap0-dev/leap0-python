@@ -334,4 +334,3 @@ def __getattr__(name: str) -> object:
 
 def __dir__() -> list[str]:
     return sorted(__all__)
-    "GcpRegistryCredentialsDict",
