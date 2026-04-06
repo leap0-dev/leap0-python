@@ -4,7 +4,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from leap0._sync.filesystem import FilesystemClient, _parse_multipart_response
+from leap0._sync.filesystem import FilesystemClient
+from leap0._utils.multipart import parse_multipart_response
 from leap0.models.errors import Leap0Error
 from leap0.models.filesystem import FileEdit
 
@@ -94,12 +95,12 @@ class TestParseMultipartResponse:
             f"Content-Type: application/octet-stream\r\n\r\ncontent a\r\n"
             f"--{boundary}--\r\n"
         ).encode()
-        result = _parse_multipart_response(f"multipart/form-data; boundary={boundary}", body)
+        result = parse_multipart_response(f"multipart/form-data; boundary={boundary}", body)
         assert result["/a.txt"] == b"content a"
 
     def test_non_multipart_raises(self):
         with pytest.raises(ValueError, match="Expected multipart"):
-            _parse_multipart_response("application/json", b'{"error": "bad"}')
+            parse_multipart_response("application/json", b'{"error": "bad"}')
 
     def test_text_part_raises(self):
         boundary = "boundary123"
@@ -108,5 +109,5 @@ class TestParseMultipartResponse:
             f"Content-Type: text/plain; charset=utf-8\r\n\r\ncontent a\r\n"
             f"--{boundary}--\r\n"
         ).encode()
-        with pytest.raises(ValueError, match="Failed to parse /read-files response"):
-            _parse_multipart_response(f"multipart/form-data; boundary={boundary}", body)
+        with pytest.raises(ValueError, match="Failed to parse read_files multipart body"):
+            parse_multipart_response(f"multipart/form-data; boundary={boundary}", body, operation="read_files")

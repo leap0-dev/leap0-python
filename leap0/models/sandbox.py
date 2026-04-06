@@ -67,8 +67,7 @@ def _validate_network_policy(policy: NetworkPolicyDict | None) -> NetworkPolicyD
     if allow_domains is not None:
         if len(allow_domains) > 50:
             raise ValueError("network_policy.allow_domains must contain at most 50 entries")
-        for domain in allow_domains:
-            _validate_domain_pattern(domain)
+        policy["allow_domains"] = [_validate_domain_pattern(domain) for domain in allow_domains]
 
     allow_cidrs = policy.get("allow_cidrs")
     if allow_cidrs is not None:
@@ -92,7 +91,7 @@ def _validate_network_policy(policy: NetworkPolicyDict | None) -> NetworkPolicyD
                 raise ValueError(f"network_policy.transforms[{index}] missing required 'domain': {transform!r}")
             if not isinstance(domain, str):
                 raise ValueError(f"network_policy.transforms[{index}].domain must be a string, got: {domain!r}")
-            _validate_domain_pattern(domain)
+            transform["domain"] = _validate_domain_pattern(domain)
 
     return policy
 

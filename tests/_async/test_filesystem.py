@@ -82,5 +82,5 @@ class TestParseMultipartResponse:
             f"Content-Type: text/plain; charset=utf-8\r\n\r\ncontent a\r\n"
             f"--{boundary}--\r\n"
         ).encode()
-        with pytest.raises(ValueError, match="Failed to parse /read-files response"):
+        with pytest.raises(ValueError, match="Failed to parse read_files multipart body"):
             _parse_multipart_response(f"multipart/form-data; boundary={boundary}", body)
