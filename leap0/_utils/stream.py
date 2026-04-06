@@ -34,19 +34,7 @@ def _emit_sse_event(buffer: list[str]) -> dict[str, Any] | list[Any] | str | Non
     if not data_lines:
         return None
 
-    event_name: str | None = None
-    for item in buffer:
-        if item.startswith("event:"):
-            event_name = item[6:].lstrip(" ")
-
     data = "\n".join(data_lines)
-    if event_name == "error":
-        parsed = _parse_sse_data(data)
-        if isinstance(parsed, dict):
-            return parsed
-        if isinstance(parsed, list):
-            return {"error": parsed}
-        return {"error": data}
     return _parse_sse_data(data)
 
 

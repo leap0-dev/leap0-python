@@ -92,25 +92,6 @@ class TestAsyncDesktopClient:
 
         asyncio.run(run())
 
-    def test_status_stream_raises_on_plain_text_error_event(self, async_mock_transport):
-        async def run() -> None:
-            response = MagicMock()
-
-            async def aiter_lines():
-                yield "event: error"
-                yield "data: Desktop request failed"
-                yield ""
-
-            response.aiter_lines = aiter_lines
-            response.aclose = AsyncMock()
-            async_mock_transport.stream.return_value = response
-
-            with pytest.raises(Leap0Error, match="Desktop status stream error"):
-                async for _ in AsyncDesktopClient(async_mock_transport, sandbox_domain="sandbox.example.com").status_stream("sbx-1"):
-                    pass
-
-        asyncio.run(run())
-
     def test_status_stream_raises_structured_error_detail(self, async_mock_transport):
         async def run() -> None:
             response = MagicMock()

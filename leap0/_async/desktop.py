@@ -578,8 +578,6 @@ class AsyncDesktopClient:
                     try:
                         error_event = DesktopStatusStreamErrorEvent.model_validate(event)
                     except ValidationError:
-                        if "error" in event:
-                            raise Leap0Error("Desktop status stream error", body=str(event["error"])) from status_error
                         raise status_error
                     raise Leap0Error("Desktop status stream error", body=error_event.detail) from status_error
         finally:
