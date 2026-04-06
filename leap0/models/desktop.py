@@ -99,6 +99,8 @@ class DesktopClickParams(BaseModel):
         for name, value in (("x", self.x), ("y", self.y)):
             if value is not None and value < 0:
                 raise ValueError(f"{name} must be >= 0")
+        if self.button is not None and self.button not in {1, 2, 3}:
+            raise ValueError("button must be one of: 1, 2, 3")
         return self
 
 
@@ -323,13 +325,21 @@ class DesktopProcessStatusList:
         return cls(
             status=_require_str(data, "status"),
             items=[
-                DesktopProcessStatus.from_dict(item)  # type: ignore[arg-type]
-                for item in raw_items
-                if isinstance(item, dict)
+                DesktopProcessStatus.from_dict(item)
+                for item in _validated_status_items(raw_items)
             ],
             running=_require_int(data, "running"),
             total=_require_int(data, "total"),
         )
+
+
+def _validated_status_items(raw_items: list[Any] | tuple[Any, ...]) -> list[DesktopProcessStatusDict]:
+    validated_items: list[DesktopProcessStatusDict] = []
+    for index, item in enumerate(raw_items):
+        if not isinstance(item, dict):
+            raise TypeError(f"Desktop response item at index {index} must be a mapping, got: {item!r}")
+        validated_items.append(item)
+    return validated_items
 
 @dataclass(slots=True)
 class DesktopProcessRestart:

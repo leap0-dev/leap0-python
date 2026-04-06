@@ -27,7 +27,7 @@ class TestAsyncDesktopClient:
             with pytest.raises(Leap0Error, match="x and y must be provided together"):
                 await client.click("sbx-1", x=10)
 
-            assert async_mock_transport.request.call_count == 0
+            assert async_mock_transport.request_target.call_count == 0
             assert async_mock_transport.request_target_json.call_count == 0
 
         asyncio.run(run())
@@ -108,6 +108,27 @@ class TestAsyncDesktopClient:
             with pytest.raises(Leap0Error, match="Desktop status stream error"):
                 async for _ in AsyncDesktopClient(async_mock_transport, sandbox_domain="sandbox.example.com").status_stream("sbx-1"):
                     pass
+
+        asyncio.run(run())
+
+    def test_status_stream_raises_structured_error_detail(self, async_mock_transport):
+        async def run() -> None:
+            response = MagicMock()
+
+            async def aiter_lines():
+                yield 'event: error'
+                yield 'data: {"message": "Desktop request failed"}'
+                yield ""
+
+            response.aiter_lines = aiter_lines
+            response.aclose = AsyncMock()
+            async_mock_transport.stream.return_value = response
+
+            with pytest.raises(Leap0Error, match="Desktop status stream error") as exc_info:
+                async for _ in AsyncDesktopClient(async_mock_transport, sandbox_domain="sandbox.example.com").status_stream("sbx-1"):
+                    pass
+
+            assert exc_info.value.body == "Desktop request failed"
 
         asyncio.run(run())
 

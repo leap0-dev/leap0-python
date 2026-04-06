@@ -25,7 +25,7 @@ class TestDesktopClient:
         with pytest.raises(Leap0Error, match="x and y must be provided together"):
             client.click("sbx-1", x=10)
 
-        assert mock_transport.request.call_count == 0
+        assert mock_transport.request_target.call_count == 0
         assert mock_transport.request_target_json.call_count == 0
 
     def test_screenshot_allows_zero_sized_paired_region_query(self, mock_transport):
@@ -106,6 +106,20 @@ class TestDesktopClient:
 
         with pytest.raises(Leap0Error, match="Desktop status stream error"):
             list(DesktopClient(mock_transport, sandbox_domain="sandbox.example.com").status_stream("sbx-1"))
+
+    def test_status_stream_raises_structured_error_detail(self, mock_transport):
+        response = MagicMock()
+        response.iter_lines.return_value = iter([
+            "event: error",
+            'data: {"message": "Desktop request failed"}',
+            "",
+        ])
+        mock_transport.stream.return_value = response
+
+        with pytest.raises(Leap0Error, match="Desktop status stream error") as exc_info:
+            list(DesktopClient(mock_transport, sandbox_domain="sandbox.example.com").status_stream("sbx-1"))
+
+        assert exc_info.value.body == "Desktop request failed"
 
     def test_process_status_requires_documented_fields(self, mock_transport):
         mock_transport.request_target_json.return_value = {"items": [], "running": 0, "total": 0}

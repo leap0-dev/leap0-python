@@ -29,10 +29,39 @@ class TestSnapshot:
         s = Snapshot.from_dict({"id": "snap-1", "name": "my-snap", "state": "paused"})
         assert s.state == "paused"
 
+    def test_from_dict_strips_required_fields(self):
+        s = Snapshot.from_dict({"id": " snap-1 ", "name": " my-snap "})
+        assert s.id == "snap-1"
+        assert s.name == "my-snap"
+
     def test_from_dict_requires_id(self):
         with pytest.raises(ValueError, match="Snapshot response missing required non-empty string 'id'"):
             Snapshot.from_dict({"name": "my-snap"})
 
+    def test_from_dict_rejects_empty_id(self):
+        with pytest.raises(ValueError, match="Snapshot response missing required non-empty string 'id'"):
+            Snapshot.from_dict({"id": "", "name": "my-snap"})
+
+    def test_from_dict_rejects_whitespace_only_id(self):
+        with pytest.raises(ValueError, match="Snapshot response missing required non-empty string 'id'"):
+            Snapshot.from_dict({"id": "   ", "name": "my-snap"})
+
+    def test_from_dict_rejects_non_string_id(self):
+        with pytest.raises(ValueError, match="Snapshot response missing required non-empty string 'id'"):
+            Snapshot.from_dict({"id": 123, "name": "my-snap"})
+
     def test_from_dict_requires_name(self):
         with pytest.raises(ValueError, match="Snapshot response missing required non-empty string 'name'"):
             Snapshot.from_dict({"id": "snap-1"})
+
+    def test_from_dict_rejects_empty_name(self):
+        with pytest.raises(ValueError, match="Snapshot response missing required non-empty string 'name'"):
+            Snapshot.from_dict({"id": "snap-1", "name": ""})
+
+    def test_from_dict_rejects_whitespace_only_name(self):
+        with pytest.raises(ValueError, match="Snapshot response missing required non-empty string 'name'"):
+            Snapshot.from_dict({"id": "snap-1", "name": "   "})
+
+    def test_from_dict_rejects_non_string_name(self):
+        with pytest.raises(ValueError, match="Snapshot response missing required non-empty string 'name'"):
+            Snapshot.from_dict({"id": "snap-1", "name": 123})

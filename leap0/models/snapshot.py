@@ -86,6 +86,8 @@ class Snapshot:
             raise ValueError(
                 f"Snapshot response missing required non-empty string 'name', got: {snapshot_name!r}"
             )
+        snapshot_id = snapshot_id.strip()
+        snapshot_name = snapshot_name.strip()
         state = data.get("state")
         return cls(
             id=snapshot_id,

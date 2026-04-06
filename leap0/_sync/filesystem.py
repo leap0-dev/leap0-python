@@ -7,6 +7,7 @@ from ..models.filesystem import EditFileResult, EditResult, FileEdit, FileInfo, 
 from ..models.sandbox import SandboxRef, sandbox_id_of
 from .._schemas.filesystem import EditFileResponseDict, EditFilesResponseDict, ExistsResponseDict, FileInfoDict, GlobResponseDict, GrepResponseDict, LsResponseDict, TreeResponseDict
 from .._utils.errors import intercept_errors
+from .._utils.multipart import parse_multipart_response
 from ._transport import Transport
 
 
@@ -499,31 +500,4 @@ class FilesystemClient:
 
 
 def _parse_multipart_response(content_type: str, body: bytes) -> dict[str, bytes]:
-    from email.parser import BytesParser
-
-    raw = f"Content-Type: {content_type}\r\n\r\n".encode() + body
-    msg = BytesParser().parsebytes(raw)
-
-    result: dict[str, bytes] = {}
-    if not msg.is_multipart():
-        body_preview = body[:200] if len(body) > 200 else body
-        raise ValueError(
-            f"Expected multipart response but got content_type={content_type!r} "
-            f"(body length={len(body)}, preview={body_preview!r})"
-        )
-    for part in msg.get_payload():  # type: ignore[union-attr]
-        name = part.get_param("name", header="content-disposition")
-        if not name:
-            continue
-        content_type = part.get_content_type()
-        if content_type != "application/octet-stream":
-            raise ValueError(
-                f"Failed to parse /read-files response: expected file bytes for entry {name!r}, got {content_type}"
-            )
-        payload = part.get_payload(decode=True)
-        if payload is None:
-            raise ValueError(
-                f"Failed to parse /read-files response: expected file bytes for entry {name!r}, got {content_type}"
-            )
-        result[str(name)] = payload
-    return result
+    return parse_multipart_response(content_type, body)
