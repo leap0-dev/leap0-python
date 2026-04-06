@@ -71,21 +71,30 @@ class Snapshot:
     vcpu: int = 0
     memory_mib: int = 0
     disk_mib: int = 0
-    state: SandboxState | str = SandboxState.STARTING
+    state: SandboxState | str | None = None
     network_policy: NetworkPolicyDict | None = None
     created_at: str = ""
 
     @classmethod
     def from_dict(cls, data: SnapshotCreateResponseDict) -> Snapshot:
         """Build an instance from a wire-format dictionary."""
+        snapshot_id = data.get("id")
+        if not isinstance(snapshot_id, str) or not snapshot_id.strip():
+            raise ValueError(f"Snapshot response missing required non-empty string 'id', got: {snapshot_id!r}")
+        snapshot_name = data.get("name")
+        if not isinstance(snapshot_name, str) or not snapshot_name.strip():
+            raise ValueError(
+                f"Snapshot response missing required non-empty string 'name', got: {snapshot_name!r}"
+            )
+        state = data.get("state")
         return cls(
-            id=data.get("id", ""),
-            name=data.get("name", ""),
+            id=snapshot_id,
+            name=snapshot_name,
             template_id=data.get("template_id", ""),
             vcpu=int(data.get("vcpu", 0)),
             memory_mib=int(data.get("memory_mib", 0)),
             disk_mib=int(data.get("disk_mib", 0)),
-            state=_parse_sandbox_state(data.get("state")),
+            state=_parse_sandbox_state(state) if state is not None else None,
             network_policy=data.get("network_policy"),
             created_at=data.get("created_at", ""),
         )

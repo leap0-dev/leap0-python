@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from typing import Any, Literal, TypedDict, cast
 
-class DesktopDisplayInfoDict(TypedDict, total=False):
+from typing_extensions import NotRequired, Required
+
+class DesktopDisplayInfoDict(TypedDict):
     """Wire schema for desktop display information."""
     display: str
     width: int
@@ -26,7 +28,7 @@ class DesktopWindowsDict(TypedDict):
     """Wire schema for desktop window listings."""
     items: list[DesktopWindowDict]
 
-class DesktopPointerPositionDict(TypedDict, total=False):
+class DesktopPointerPositionDict(TypedDict):
     """Wire schema for pointer position."""
     x: int
     y: int
@@ -53,19 +55,19 @@ class DesktopRecordingSummaryDict(TypedDict, total=False):
     created_at: str
     active: bool
 
-class DesktopHealthDict(TypedDict, total=False):
+class DesktopHealthDict(TypedDict):
     """Wire schema for desktop health state."""
     ok: bool
 
 class DesktopProcessStatusDict(TypedDict, total=False):
     """Wire schema for one desktop process status."""
-    name: str
-    running: bool
-    pid: int
-    stdout_log: str
-    stderr_log: str
+    name: Required[str]
+    running: Required[bool]
+    pid: NotRequired[int]
+    stdout_log: Required[str]
+    stderr_log: Required[str]
 
-class DesktopProcessStatusListDict(TypedDict, total=False):
+class DesktopProcessStatusListDict(TypedDict):
     """Wire schema for desktop process status listings."""
     status: str
     items: list[DesktopProcessStatusDict]

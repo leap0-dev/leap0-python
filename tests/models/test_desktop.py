@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from leap0.models.desktop import (
     DesktopDisplayInfo, DesktopHealth, DesktopPointerPosition, DesktopProcessErrors,
     DesktopProcessLogs, DesktopProcessRestart, DesktopProcessStatus, DesktopProcessStatusList,
@@ -11,8 +13,9 @@ class TestDesktopHealth:
     def test_ok_true(self):
         assert DesktopHealth.from_dict({"ok": True}).ok is True
 
-    def test_empty_dict(self):
-        assert DesktopHealth.from_dict({}).ok is False
+    def test_requires_ok(self):
+        with pytest.raises(ValueError, match="missing boolean 'ok'"):
+            DesktopHealth.from_dict({})
 
 
 class TestDesktopDisplayInfo:
@@ -55,24 +58,58 @@ class TestDesktopRecordingSummary:
 
 class TestDesktopProcessStatus:
     def test_from_dict(self):
-        p = DesktopProcessStatus.from_dict({"name": "xvfb", "running": True, "pid": 123})
+        p = DesktopProcessStatus.from_dict(
+            {
+                "name": "xvfb",
+                "running": True,
+                "pid": 123,
+                "stdout_log": "/tmp/xvfb.stdout.log",
+                "stderr_log": "/tmp/xvfb.stderr.log",
+            }
+        )
         assert p.running is True
 
 
 class TestDesktopProcessStatusList:
     def test_from_dict(self):
-        sl = DesktopProcessStatusList.from_dict({"status": "running", "items": [{"name": "xvfb", "running": True, "pid": 1}],
-                                                 "running": 1, "total": 4})
+        sl = DesktopProcessStatusList.from_dict(
+            {
+                "status": "running",
+                "items": [
+                    {
+                        "name": "xvfb",
+                        "running": True,
+                        "pid": 1,
+                        "stdout_log": "/tmp/xvfb.stdout.log",
+                        "stderr_log": "/tmp/xvfb.stderr.log",
+                    }
+                ],
+                "running": 1,
+                "total": 4,
+            }
+        )
         assert len(sl.items) == 1
         assert sl.total == 4
 
-    def test_empty_dict(self):
-        assert DesktopProcessStatusList.from_dict({}).items == []
+    def test_requires_status_fields(self):
+        with pytest.raises(ValueError, match="missing array 'items'"):
+            DesktopProcessStatusList.from_dict({})
 
 
 class TestDesktopProcessRestart:
     def test_with_status(self):
-        r = DesktopProcessRestart.from_dict({"message": "restarted", "status": {"name": "xvfb", "running": True, "pid": 42}})
+        r = DesktopProcessRestart.from_dict(
+            {
+                "message": "restarted",
+                "status": {
+                    "name": "xvfb",
+                    "running": True,
+                    "pid": 42,
+                    "stdout_log": "/tmp/xvfb.stdout.log",
+                    "stderr_log": "/tmp/xvfb.stderr.log",
+                },
+            }
+        )
         assert r.status.pid == 42
 
     def test_without_status(self):

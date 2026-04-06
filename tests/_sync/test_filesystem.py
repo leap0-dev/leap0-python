@@ -50,6 +50,22 @@ class TestFilesystemClient:
         mock_transport.request.return_value = MagicMock(content=b"Hello")
         assert FilesystemClient(mock_transport).read_bytes("sbx-1", path="/workspace/hello.bin") == b"Hello"
 
+    def test_read_bytes_rejects_head_and_tail(self, mock_transport):
+        with pytest.raises(Exception, match="mutually exclusive"):
+            FilesystemClient(mock_transport).read_bytes("sbx-1", path="/workspace/hello.bin", head=1, tail=1)
+
+    def test_set_permissions_rejects_missing_or_blank_updates(self, mock_transport):
+        client = FilesystemClient(mock_transport)
+
+        with pytest.raises(Exception, match="at least one of mode, owner, or group"):
+            client.set_permissions("sbx-1", path="/workspace/a.txt")
+        with pytest.raises(Exception, match="mode must be a non-empty string"):
+            client.set_permissions("sbx-1", path="/workspace/a.txt", mode="   ")
+        with pytest.raises(Exception, match="owner must be a non-empty string"):
+            client.set_permissions("sbx-1", path="/workspace/a.txt", owner="")
+
+        assert mock_transport.request.call_count == 0
+
     def test_write_files(self, mock_transport):
         mock_transport.request.return_value = MagicMock(status_code=204)
         FilesystemClient(mock_transport).write_files("sbx-1", files={"/workspace/hello.txt": "Hello"})
@@ -83,3 +99,13 @@ class TestParseMultipartResponse:
     def test_non_multipart_raises(self):
         with pytest.raises(ValueError, match="Expected multipart"):
             _parse_multipart_response("application/json", b'{"error": "bad"}')
+
+    def test_text_part_raises(self):
+        boundary = "boundary123"
+        body = (
+            f"--{boundary}\r\nContent-Disposition: form-data; name=\"/a.txt\"\r\n"
+            f"Content-Type: text/plain; charset=utf-8\r\n\r\ncontent a\r\n"
+            f"--{boundary}--\r\n"
+        ).encode()
+        with pytest.raises(ValueError, match="Failed to parse /read-files response"):
+            _parse_multipart_response(f"multipart/form-data; boundary={boundary}", body)

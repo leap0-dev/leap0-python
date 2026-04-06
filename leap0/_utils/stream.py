@@ -29,6 +29,22 @@ def _parse_sse_data(data: str) -> dict[str, Any] | str:
     return parsed if isinstance(parsed, dict) else data
 
 
+def _emit_sse_event(buffer: list[str]) -> dict[str, Any] | str | None:
+    data_lines = [_sse_data_value(item) for item in buffer if item.startswith("data:")]
+    if not data_lines:
+        return None
+
+    event_name: str | None = None
+    for item in buffer:
+        if item.startswith("event:"):
+            event_name = item[6:].lstrip(" ")
+
+    data = "\n".join(data_lines)
+    if event_name == "error":
+        return {"error": data}
+    return _parse_sse_data(data)
+
+
 def iter_sse_events(lines: Iterable[str]) -> Iterator[dict[str, Any] | str]:
     """Yield parsed events from an SSE line iterator."""
     buffer: list[str] = []
@@ -36,18 +52,18 @@ def iter_sse_events(lines: Iterable[str]) -> Iterator[dict[str, Any] | str]:
         stripped = line.rstrip("\r\n")
         if stripped == "":
             if buffer:
-                data_lines = [_sse_data_value(item) for item in buffer if item.startswith("data:")]
-                if data_lines:
-                    yield _parse_sse_data("\n".join(data_lines))
+                event = _emit_sse_event(buffer)
+                if event is not None:
+                    yield event
                 buffer.clear()
             continue
         if stripped.startswith(":"):
             continue
         buffer.append(stripped)
     if buffer:
-        data_lines = [_sse_data_value(item) for item in buffer if item.startswith("data:")]
-        if data_lines:
-            yield _parse_sse_data("\n".join(data_lines))
+        event = _emit_sse_event(buffer)
+        if event is not None:
+            yield event
 
 
 async def aiter_sse_events(lines: AsyncIterable[str]) -> AsyncIterator[dict[str, Any] | str]:
@@ -57,15 +73,15 @@ async def aiter_sse_events(lines: AsyncIterable[str]) -> AsyncIterator[dict[str,
         stripped = line.rstrip("\r\n")
         if stripped == "":
             if buffer:
-                data_lines = [_sse_data_value(item) for item in buffer if item.startswith("data:")]
-                if data_lines:
-                    yield _parse_sse_data("\n".join(data_lines))
+                event = _emit_sse_event(buffer)
+                if event is not None:
+                    yield event
                 buffer.clear()
             continue
         if stripped.startswith(":"):
             continue
         buffer.append(stripped)
     if buffer:
-        data_lines = [_sse_data_value(item) for item in buffer if item.startswith("data:")]
-        if data_lines:
-            yield _parse_sse_data("\n".join(data_lines))
+        event = _emit_sse_event(buffer)
+        if event is not None:
+            yield event

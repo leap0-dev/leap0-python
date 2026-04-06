@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from leap0.models.config import Leap0Config
 
 
@@ -29,6 +31,24 @@ def test_explicit_sdk_flag_precedence(monkeypatch):
     config = Leap0Config()
 
     assert config.sdk_otel_enabled is False
+
+
+def test_sdk_otel_enabled_accepts_case_insensitive_values(monkeypatch):
+    monkeypatch.setenv("LEAP0_API_KEY", "test-key")
+    monkeypatch.setenv("LEAP0_SDK_OTEL_ENABLED", "TrUe")
+
+    assert Leap0Config().sdk_otel_enabled is True
+
+    monkeypatch.setenv("LEAP0_SDK_OTEL_ENABLED", "FaLsE")
+    assert Leap0Config().sdk_otel_enabled is False
+
+
+def test_sdk_otel_enabled_rejects_invalid_string(monkeypatch):
+    monkeypatch.setenv("LEAP0_API_KEY", "test-key")
+    monkeypatch.setenv("LEAP0_SDK_OTEL_ENABLED", "maybe")
+
+    with pytest.raises(ValueError, match="invalid LEAP0_SDK_OTEL_ENABLED value: maybe"):
+        Leap0Config()
 
 
 def test_legacy_otel_env_no_longer_enables_sdk(monkeypatch):

@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any, cast
 
 from .._internal.types import JsonObject
-from ..models.filesystem import EditFileResult, EditResult, FileEdit, FileInfo, LsResult, SearchMatch, TreeResult
+from ..models.filesystem import EditFileResult, EditResult, FileEdit, FileInfo, LsResult, ReadFileParams, SearchMatch, SetPermissionsParams, TreeResult
 from ..models.sandbox import SandboxRef, sandbox_id_of
 from .._schemas.filesystem import EditFileResponseDict, EditFilesResponseDict, ExistsResponseDict, FileInfoDict, GlobResponseDict, GrepResponseDict, LsResponseDict, TreeResponseDict
 from .._utils.errors import intercept_errors
@@ -211,15 +211,7 @@ class FilesystemClient:
             print(content)
             ```
         """
-        payload: JsonObject = {"path": path}
-        if offset is not None:
-            payload["offset"] = offset
-        if limit is not None:
-            payload["limit"] = limit
-        if head is not None:
-            payload["head"] = head
-        if tail is not None:
-            payload["tail"] = tail
+        payload = ReadFileParams(path=path, offset=offset, limit=limit, head=head, tail=tail).model_dump(exclude_none=True)
         response = self._transport.request("POST", f"/v1/sandbox/{sandbox_id_of(sandbox)}/filesystem/read-file", json=payload, timeout=http_timeout)
         return response.content
 
@@ -341,13 +333,7 @@ class FilesystemClient:
             Args:
             http_timeout: Optional HTTP request timeout in seconds for this SDK call.
         """
-        payload: JsonObject = {"path": path}
-        if mode is not None:
-            payload["mode"] = mode
-        if owner is not None:
-            payload["owner"] = owner
-        if group is not None:
-            payload["group"] = group
+        payload = SetPermissionsParams(path=path, mode=mode, owner=owner, group=group).model_dump(exclude_none=True)
         self._transport.request("POST", f"/v1/sandbox/{sandbox_id_of(sandbox)}/filesystem/set-permissions", json=payload, expected_status=204, timeout=http_timeout)
 
     @intercept_errors("Failed to glob: ")
@@ -527,8 +513,17 @@ def _parse_multipart_response(content_type: str, body: bytes) -> dict[str, bytes
         )
     for part in msg.get_payload():  # type: ignore[union-attr]
         name = part.get_param("name", header="content-disposition")
-        if name:
-            payload = part.get_payload(decode=True)
-            if payload is not None:
-                result[str(name)] = payload
+        if not name:
+            continue
+        content_type = part.get_content_type()
+        if content_type != "application/octet-stream":
+            raise ValueError(
+                f"Failed to parse /read-files response: expected file bytes for entry {name!r}, got {content_type}"
+            )
+        payload = part.get_payload(decode=True)
+        if payload is None:
+            raise ValueError(
+                f"Failed to parse /read-files response: expected file bytes for entry {name!r}, got {content_type}"
+            )
+        result[str(name)] = payload
     return result

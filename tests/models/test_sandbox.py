@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from leap0.models.sandbox import Sandbox, SandboxStatus, sandbox_id_of
+from leap0.models.sandbox import CreateSandboxParams, Sandbox, SandboxStatus, sandbox_id_of
 
 
 class TestSandboxIdOf:
@@ -52,3 +52,18 @@ class TestSandboxStatus:
     def test_empty_dict_raises(self):
         with pytest.raises(ValueError, match="missing required non-empty string 'id'"):
             SandboxStatus.from_dict({})
+
+
+class TestCreateSandboxParams:
+    def test_rejects_invalid_network_policy(self):
+        with pytest.raises(ValueError, match="network_policy.mode"):
+            CreateSandboxParams(network_policy={"mode": "nope"})
+
+        with pytest.raises(ValueError, match="invalid network policy domain pattern"):
+            CreateSandboxParams(network_policy={"mode": "custom", "allow_domains": ["localhost"]})
+
+        with pytest.raises(ValueError, match="invalid network policy CIDR"):
+            CreateSandboxParams(network_policy={"mode": "custom", "allow_cidrs": ["bad"]})
+
+        with pytest.raises(ValueError, match="allow_domains must contain at most 50"):
+            CreateSandboxParams(network_policy={"mode": "custom", "allow_domains": ["a.example.com"] * 51})

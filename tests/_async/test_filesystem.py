@@ -56,8 +56,31 @@ class TestAsyncFilesystemClient:
 
         asyncio.run(run())
 
+    def test_set_permissions_rejects_missing_or_blank_updates(self, async_mock_transport):
+        async def run() -> None:
+            client = AsyncFilesystemClient(async_mock_transport)
+
+            with pytest.raises(Leap0Error, match="at least one of mode, owner, or group"):
+                await client.set_permissions("sbx-1", path="/workspace/a.txt")
+            with pytest.raises(Leap0Error, match="group must be a non-empty string"):
+                await client.set_permissions("sbx-1", path="/workspace/a.txt", group="   ")
+
+            assert async_mock_transport.request.call_count == 0
+
+        asyncio.run(run())
+
 
 class TestParseMultipartResponse:
     def test_non_multipart_redacts_preview(self):
         with pytest.raises(ValueError, match="<redacted>"):
             _parse_multipart_response("application/json", b'{"secret": "value"}')
+
+    def test_text_part_raises(self):
+        boundary = "boundary123"
+        body = (
+            f"--{boundary}\r\nContent-Disposition: form-data; name=\"/a.txt\"\r\n"
+            f"Content-Type: text/plain; charset=utf-8\r\n\r\ncontent a\r\n"
+            f"--{boundary}--\r\n"
+        ).encode()
+        with pytest.raises(ValueError, match="Failed to parse /read-files response"):
+            _parse_multipart_response(f"multipart/form-data; boundary={boundary}", body)
