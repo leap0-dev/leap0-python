@@ -500,4 +500,4 @@ class AsyncFilesystemClient:
 
 
 def _parse_multipart_response(content_type: str, body: bytes) -> dict[str, bytes]:
-    return parse_multipart_response(content_type, body)
+    return parse_multipart_response(content_type, body, operation="read_files")

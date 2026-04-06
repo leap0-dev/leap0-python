@@ -56,7 +56,7 @@ class TestSandboxStatus:
 
 class TestCreateSandboxParams:
     def test_rejects_invalid_network_policy(self):
-        with pytest.raises(ValueError, match="network_policy.mode"):
+        with pytest.raises(ValueError, match=r"network_policy\.mode"):
             CreateSandboxParams(network_policy={"mode": "nope"})
 
         with pytest.raises(ValueError, match="invalid network policy domain pattern"):

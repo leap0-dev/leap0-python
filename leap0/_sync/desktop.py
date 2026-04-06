@@ -646,7 +646,7 @@ class DesktopClient:
                                 "Desktop status stream error",
                                 body=str(event["error"]),
                             ) from status_error
-                        raise status_error
+                        raise
                     raise Leap0Error("Desktop status stream error", body=error_event.detail) from status_error
         finally:
             response.close()

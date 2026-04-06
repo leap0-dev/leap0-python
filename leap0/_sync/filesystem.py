@@ -277,7 +277,11 @@ class FilesystemClient:
             json={"paths": paths},
             timeout=http_timeout,
         )
-        return _parse_multipart_response(response.headers.get("content-type", ""), response.content)
+        return parse_multipart_response(
+            response.headers.get("content-type", ""),
+            response.content,
+            operation="read_files",
+        )
 
     @intercept_errors("Failed to read files: ")
     def read_files(self, sandbox: SandboxRef, *, paths: list[str], encoding: str = "utf-8", http_timeout: float | None = None) -> dict[str, str]:
@@ -497,7 +501,3 @@ class FilesystemClient:
             payload["exclude"] = exclude
         data = cast(TreeResponseDict, self._transport.request_json("POST", f"/v1/sandbox/{sandbox_id_of(sandbox)}/filesystem/tree", json=payload, timeout=http_timeout))
         return TreeResult.from_dict(data)
-
-
-def _parse_multipart_response(content_type: str, body: bytes) -> dict[str, bytes]:
-    return parse_multipart_response(content_type, body)
