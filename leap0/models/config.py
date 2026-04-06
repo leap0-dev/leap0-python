@@ -30,6 +30,25 @@ DEFAULT_TIMEOUT_MIN = 5
 
 DEFAULT_CLIENT_TIMEOUT = 300.0
 
+
+def _resolve_sdk_otel_enabled(value: bool | None) -> bool:
+    if value is not None:
+        return value
+
+    sdk_otel_env = os.environ.get(LEAP0_SDK_OTEL_ENABLED_ENV)
+    sdk_otel_env = sdk_otel_env.strip() if sdk_otel_env is not None else None
+    if not sdk_otel_env:
+        return bool(os.environ.get(OTEL_EXPORTER_OTLP_ENDPOINT_ENV))
+
+    lowered = sdk_otel_env.lower()
+    if lowered == "true":
+        return True
+    if lowered == "false":
+        return False
+    raise ValueError(
+        f"invalid {LEAP0_SDK_OTEL_ENABLED_ENV} value: {sdk_otel_env}"
+    )
+
 def _resolve_env_str(value: str | None, env_var: str, default: str) -> str:
     resolved = value.strip() if value else None
     if not resolved:
@@ -73,13 +92,7 @@ class Leap0Config(BaseModel):
         self.timeout = timeout
         self.api_key = api_key
         self.auth_header = auth_header
-        if self.sdk_otel_enabled is None:
-            sdk_otel_env = os.environ.get(LEAP0_SDK_OTEL_ENABLED_ENV)
-            sdk_otel_env = sdk_otel_env.strip() if sdk_otel_env is not None else None
-            if sdk_otel_env:
-                self.sdk_otel_enabled = sdk_otel_env.lower() == "true"
-            else:
-                self.sdk_otel_enabled = bool(os.environ.get(OTEL_EXPORTER_OTLP_ENDPOINT_ENV))
+        self.sdk_otel_enabled = _resolve_sdk_otel_enabled(self.sdk_otel_enabled)
         self.base_url = _resolve_env_str(self.base_url, LEAP0_BASE_URL_ENV, DEFAULT_BASE_URL)
         self.sandbox_domain = _resolve_env_str(
             self.sandbox_domain,

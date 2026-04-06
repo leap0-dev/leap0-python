@@ -17,7 +17,8 @@ async def main() -> None:
             result: ProcessResult = await sandbox.process.execute(command="echo hello from async leap0")
             print("sandbox:", sandbox.id)
             print("exit code:", result.exit_code)
-            print("result:", result.result.strip())
+            print("stdout:", result.stdout.strip())
+            print("stderr:", result.stderr.strip())
         finally:
             await sandbox.delete()
 

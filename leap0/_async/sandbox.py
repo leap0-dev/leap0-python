@@ -102,13 +102,16 @@ class AsyncSandbox(SandboxHandle):
         self._data = latest._data
         return self
 
-    async def pause(self) -> AsyncSandbox:
+    async def pause(self, http_timeout: float | None = None) -> AsyncSandbox:
         """Pause the sandbox and return updated metadata.
+
+        Args:
+            http_timeout: Optional HTTP request timeout in seconds for this SDK call.
 
         Returns:
             AsyncSandbox: This sandbox object with updated metadata.
         """
-        latest = await self._client.sandboxes.pause(self)
+        latest = await self._client.sandboxes.pause(self, http_timeout=http_timeout)
         self._data = latest._data
         return self
 
@@ -237,17 +240,25 @@ class AsyncSandboxesClient(Generic[AsyncSandboxT]):
         return self._wrap_sandbox(SandboxData.from_dict(data))
 
     @intercept_errors("Failed to pause sandbox: ")
-    async def pause(self, sandbox: SandboxRef) -> AsyncSandboxT | SandboxData | SandboxStatus:
+    async def pause(
+        self,
+        sandbox: SandboxRef,
+        http_timeout: float | None = None,
+    ) -> AsyncSandboxT | SandboxData | SandboxStatus:
         """Pause the sandbox and return updated metadata.
 
         Args:
             sandbox: Sandbox ID or object.
+            http_timeout: Optional HTTP request timeout in seconds for this SDK call.
 
         Returns:
             AsyncSandboxT | SandboxData | SandboxStatus: Updated sandbox object.
         """
         data: SandboxCreateResponseDict = await self._transport.request_json(
-            "POST", f"/v1/sandbox/{sandbox_id_of(sandbox)}/pause", expected_status=201
+            "POST",
+            f"/v1/sandbox/{sandbox_id_of(sandbox)}/pause",
+            expected_status=201,
+            timeout=http_timeout,
         )
         return self._wrap_sandbox(SandboxData.from_dict(data))
 

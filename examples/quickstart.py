@@ -15,7 +15,8 @@ def main() -> None:
         result: ProcessResult = sandbox.process.execute(command="echo hello from leap0")
         print("sandbox:", sandbox.id)
         print("exit code:", result.exit_code)
-        print("result:", result.result.strip())
+        print("stdout:", result.stdout.strip())
+        print("stderr:", result.stderr.strip())
     finally:
         sandbox.delete()
         client.close()

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
+import ipaddress
+import re
 from typing import TypeAlias
 
 from pydantic import BaseModel, ConfigDict, model_validator
@@ -26,6 +28,65 @@ class NetworkPolicyMode(str, Enum):
     ALLOW_ALL = "allow-all"
     DENY_ALL = "deny-all"
     CUSTOM = "custom"
+
+
+_DOMAIN_LABEL_RE = re.compile(r"^[A-Za-z0-9-]+$")
+
+
+def _validate_domain_pattern(value: str) -> str:
+    domain = value.strip()
+    if not domain:
+        raise ValueError("network policy domains must be non-empty")
+
+    host = domain[2:] if domain.startswith("*.") else domain
+    if not host or host.startswith(".") or host.endswith("."):
+        raise ValueError(f"invalid network policy domain pattern: {value!r}")
+    if ":" in host:
+        raise ValueError(f"invalid network policy domain pattern: {value!r}")
+
+    labels = host.split(".")
+    if len(labels) < 2:
+        raise ValueError(f"invalid network policy domain pattern: {value!r}")
+    for label in labels:
+        if not label or label.startswith("-") or label.endswith("-") or not _DOMAIN_LABEL_RE.fullmatch(label):
+            raise ValueError(f"invalid network policy domain pattern: {value!r}")
+    return domain
+
+
+def _validate_network_policy(policy: NetworkPolicyDict | None) -> NetworkPolicyDict | None:
+    if policy is None:
+        return None
+
+    mode = policy.get("mode")
+    valid_modes = {item.value for item in NetworkPolicyMode}
+    if mode not in valid_modes:
+        raise ValueError(f"network_policy.mode must be one of {sorted(valid_modes)}")
+
+    allow_domains = policy.get("allow_domains")
+    if allow_domains is not None:
+        if len(allow_domains) > 50:
+            raise ValueError("network_policy.allow_domains must contain at most 50 entries")
+        for domain in allow_domains:
+            _validate_domain_pattern(domain)
+
+    allow_cidrs = policy.get("allow_cidrs")
+    if allow_cidrs is not None:
+        if len(allow_cidrs) > 10:
+            raise ValueError("network_policy.allow_cidrs must contain at most 10 entries")
+        for cidr in allow_cidrs:
+            try:
+                ipaddress.IPv4Network(cidr, strict=False)
+            except ValueError as err:
+                raise ValueError(f"invalid network policy CIDR: {cidr!r}") from err
+
+    transforms = policy.get("transforms")
+    if transforms is not None:
+        if len(transforms) > 20:
+            raise ValueError("network_policy.transforms must contain at most 20 entries")
+        for transform in transforms:
+            _validate_domain_pattern(transform["domain"])
+
+    return policy
 
 class CreateSandboxParams(BaseModel):
     """Validated sandbox creation parameters."""
@@ -53,6 +114,7 @@ class CreateSandboxParams(BaseModel):
             raise ValueError("memory_mib must be an even number between 512 and 8192")
         if not 1 <= self.timeout_min <= 480:
             raise ValueError("timeout_min must be between 1 and 480")
+        self.network_policy = _validate_network_policy(self.network_policy)
         self.template_name = template_name
         return self
 

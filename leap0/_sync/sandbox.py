@@ -99,13 +99,16 @@ class Sandbox(SandboxHandle):
         self._data = latest._data
         return self
 
-    def pause(self) -> Sandbox:
+    def pause(self, http_timeout: float | None = None) -> Sandbox:
         """Pause the sandbox and update this handle with the latest metadata.
+
+        Args:
+            http_timeout: Optional HTTP request timeout in seconds for this SDK call.
 
         Returns:
             Sandbox: This sandbox object with updated metadata.
         """
-        latest = self._client.sandboxes.pause(self)
+        latest = self._client.sandboxes.pause(self, http_timeout=http_timeout)
         self._data = latest._data
         return self
 

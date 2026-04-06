@@ -35,7 +35,7 @@ class TestIterSseEvents:
         assert list(iter_sse_events(["event: update", "id: 42", "data: {\"ok\": true}", ""])) == [{"ok": True}]
 
     def test_plain_text_data_preserved(self):
-        assert list(iter_sse_events(["event: error", "data: desktop stream failed", ""])) == ["desktop stream failed"]
+        assert list(iter_sse_events(["event: error", "data: desktop stream failed", ""])) == [{"error": "desktop stream failed"}]
 
 
 class TestIterNdjson:

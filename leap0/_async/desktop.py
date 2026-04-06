@@ -9,10 +9,12 @@ import httpx
 
 from .._internal.types import JsonObject
 from ..models.desktop import (
+    DesktopClickParams,
     DesktopDisplayInfo,
     DesktopDisplayInfoDict,
     DesktopHealth,
     DesktopHealthDict,
+    DesktopOkResponse,
     DesktopPointerPosition,
     DesktopPointerPositionDict,
     DesktopProcessErrors,
@@ -29,6 +31,10 @@ from ..models.desktop import (
     DesktopRecordingStatusDict,
     DesktopRecordingSummary,
     DesktopRecordingSummaryDict,
+    DesktopResizeScreenParams,
+    DesktopScreenshotParams,
+    DesktopScreenshotRegionParams,
+    DesktopStatusStreamErrorEvent,
     DesktopWindow,
     DesktopWindowsDict,
 )
@@ -138,7 +144,8 @@ class AsyncDesktopClient:
         Returns:
             object: Result returned by this operation.
         """
-        data = cast(DesktopDisplayInfoDict, await self._request_json("POST", sandbox, "/api/display/screen", json={"width": width, "height": height}, http_timeout=http_timeout))
+        payload = DesktopResizeScreenParams(width=width, height=height).model_dump()
+        data = cast(DesktopDisplayInfoDict, await self._request_json("POST", sandbox, "/api/display/screen", json=payload, http_timeout=http_timeout))
         return DesktopDisplayInfo.from_dict(data)
 
     @intercept_errors("Failed to list windows: ")
@@ -182,19 +189,14 @@ class AsyncDesktopClient:
         Returns:
             object: Result returned by this operation.
         """
-        params: JsonObject = {}
-        if image_format is not None:
-            params["format"] = image_format
-        if quality is not None:
-            params["quality"] = quality
-        if x is not None:
-            params["x"] = x
-        if y is not None:
-            params["y"] = y
-        if width is not None:
-            params["width"] = width
-        if height is not None:
-            params["height"] = height
+        params = DesktopScreenshotParams(
+            format=image_format,
+            quality=quality,
+            x=x,
+            y=y,
+            width=width,
+            height=height,
+        ).model_dump(exclude_none=True)
         response = await self._request("GET", sandbox, "/api/screenshot", params=params or None, http_timeout=http_timeout)
         return response.content
 
@@ -220,11 +222,14 @@ class AsyncDesktopClient:
         Returns:
             object: Result returned by this operation.
         """
-        payload: JsonObject = {"x": x, "y": y, "width": width, "height": height}
-        if image_format is not None:
-            payload["format"] = image_format
-        if quality is not None:
-            payload["quality"] = quality
+        payload = DesktopScreenshotRegionParams(
+            x=x,
+            y=y,
+            width=width,
+            height=height,
+            format=image_format,
+            quality=quality,
+        ).model_dump(exclude_none=True)
         response = await self._request("POST", sandbox, "/api/screenshot/region", json=payload, http_timeout=http_timeout)
         return response.content
 
@@ -269,13 +274,7 @@ class AsyncDesktopClient:
         Returns:
             object: Result returned by this operation.
         """
-        payload: JsonObject = {}
-        if x is not None:
-            payload["x"] = x
-        if y is not None:
-            payload["y"] = y
-        if button is not None:
-            payload["button"] = button
+        payload = DesktopClickParams(x=x, y=y, button=button).model_dump(exclude_none=True)
         data = cast(DesktopPointerPositionDict, await self._request_json("POST", sandbox, "/api/input/click", json=payload, http_timeout=http_timeout))
         return DesktopPointerPosition.from_dict(data)
 
@@ -328,7 +327,7 @@ class AsyncDesktopClient:
             object: Result returned by this operation.
         """
         data = await self._request_json("POST", sandbox, "/api/input/type", json={"text": text}, http_timeout=http_timeout)
-        return bool(data.get("ok", False))
+        return DesktopOkResponse.model_validate(data).ok
 
     @intercept_errors("Failed to press key: ")
     async def press_key(self, sandbox: SandboxRef, *, key: str, http_timeout: float | None = None) -> bool:
@@ -342,7 +341,7 @@ class AsyncDesktopClient:
             object: Result returned by this operation.
         """
         data = await self._request_json("POST", sandbox, "/api/input/press", json={"key": key}, http_timeout=http_timeout)
-        return bool(data.get("ok", False))
+        return DesktopOkResponse.model_validate(data).ok
 
     @intercept_errors("Failed to press hotkey: ")
     async def hotkey(self, sandbox: SandboxRef, *, keys: list[str]) -> bool:
@@ -356,7 +355,7 @@ class AsyncDesktopClient:
             object: Result returned by this operation.
         """
         data = await self._request_json("POST", sandbox, "/api/input/hotkey", json={"keys": keys})
-        return bool(data.get("ok", False))
+        return DesktopOkResponse.model_validate(data).ok
 
     @intercept_errors("Failed to get recording status: ")
     async def recording_status(self, sandbox: SandboxRef, http_timeout: float | None = None) -> DesktopRecordingStatus:
@@ -567,9 +566,15 @@ class AsyncDesktopClient:
                 except StopAsyncIteration:
                     break
                 if not isinstance(event, dict):
-                    continue
+                    raise ValueError(
+                        "Malformed desktop status stream event "
+                        f"for sandbox={sandbox_id_of(sandbox)!r}, source='status_stream': {event!r}"
+                    )
                 if "error" in event:
                     raise Leap0Error("Desktop status stream error", body=str(event["error"]))
+                if {"error", "message"}.intersection(event) and not {"status", "items", "running", "total"}.intersection(event):
+                    error_event = DesktopStatusStreamErrorEvent.model_validate(event)
+                    raise Leap0Error("Desktop status stream error", body=error_event.detail)
                 yield DesktopProcessStatusList.from_dict(cast(DesktopProcessStatusListDict, event))
         finally:
             await response.aclose()
@@ -598,7 +603,7 @@ class AsyncDesktopClient:
         while time.monotonic() < deadline:
             try:
                 async for status in self.status_stream(sandbox, deadline=deadline, http_timeout=http_timeout):
-                    if status.status == "running":
+                    if status.status == "running" or (status.total > 0 and status.running >= status.total):
                         return
                 raise Leap0Error("Desktop status stream ended without reaching 'running' state")
             except Leap0TimeoutError as exc:

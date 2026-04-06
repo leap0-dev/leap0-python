@@ -72,3 +72,43 @@ class TestAsyncSandboxesClient:
                 await AsyncSandboxesClient(async_mock_transport, sandbox_domain="s.dev").create(otel_export=True)
 
         asyncio.run(run())
+
+    def test_pause_forwards_http_timeout(self, async_mock_transport):
+        async def run() -> None:
+            async_mock_transport.request_json.return_value = {
+                "id": "sbx-1", "template_id": "tpl-1", "vcpu": 2, "memory_mib": 2048,
+                "disk_mib": 10240, "state": "paused", "auto_pause": False, "created_at": "",
+            }
+
+            await AsyncSandboxesClient(async_mock_transport, sandbox_domain="s.dev").pause(
+                "sbx-1",
+                http_timeout=4.0,
+            )
+
+            assert async_mock_transport.request_json.call_args.kwargs["timeout"] == 4.0
+
+        asyncio.run(run())
+
+
+class TestAsyncSandbox:
+    def test_pause_forwards_http_timeout(self):
+        async def run() -> None:
+            sandboxes = SimpleNamespace()
+            fake_client = SimpleNamespace(
+                _filesystem=SimpleNamespace(), _git=SimpleNamespace(), _process=SimpleNamespace(), _pty=SimpleNamespace(),
+                _lsp=SimpleNamespace(), _ssh=SimpleNamespace(), _code_interpreter=SimpleNamespace(), _desktop=SimpleNamespace(),
+                sandboxes=sandboxes,
+            )
+
+            async def pause(sandbox: object, http_timeout: float | None = None):
+                assert http_timeout == 2.5
+                return AsyncSandbox(fake_client, Sandbox(id="sbx-1", state="paused"))
+
+            sandboxes.pause = pause
+            sandbox = AsyncSandbox(fake_client, Sandbox(id="sbx-1", state="running"))
+
+            await sandbox.pause(http_timeout=2.5)
+
+            assert sandbox.state == "paused"
+
+        asyncio.run(run())

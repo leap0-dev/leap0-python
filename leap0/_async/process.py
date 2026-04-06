@@ -44,6 +44,7 @@ class AsyncProcessClient:
                 command="ls -la /workspace",
             )
             print(result.stdout)
+            print(result.stderr)
             ```
         """
         payload: JsonObject = {"command": command}

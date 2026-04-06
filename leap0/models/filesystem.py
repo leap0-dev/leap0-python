@@ -1,7 +1,60 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Annotated
+
+from pydantic import BaseModel, ConfigDict, StringConstraints, field_validator, model_validator
+
 from .._schemas.filesystem import EditFileResponseDict, EditFilesResponseDict, EditResultDict, ExistsResponseDict, FileInfoDict, GlobResponseDict, GrepResponseDict, LsResponseDict, SearchMatchDict, TreeEntryDict, TreeResponseDict
+
+
+class ReadFileParams(BaseModel):
+    """Validated request parameters for reading a single file."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    path: str
+    offset: int | None = None
+    limit: int | None = None
+    head: int | None = None
+    tail: int | None = None
+
+    @model_validator(mode="after")
+    def _validate_head_tail(self) -> "ReadFileParams":
+        if self.head is not None and self.tail is not None:
+            raise ValueError("`head` and `tail` are mutually exclusive")
+        return self
+
+
+NonEmptyOptionalString = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+
+
+class SetPermissionsParams(BaseModel):
+    """Validated request parameters for the set-permissions endpoint."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    path: str
+    mode: NonEmptyOptionalString | None = None
+    owner: NonEmptyOptionalString | None = None
+    group: NonEmptyOptionalString | None = None
+
+    @field_validator("mode", "owner", "group", mode="before")
+    @classmethod
+    def _validate_non_empty_string(cls, value: str | None, info: object) -> str | None:
+        if value is None:
+            return None
+        trimmed = value.strip()
+        if not trimmed:
+            field_name = getattr(info, "field_name", "value")
+            raise ValueError(f"set_permissions {field_name} must be a non-empty string")
+        return trimmed
+
+    @model_validator(mode="after")
+    def _validate_updates(self) -> "SetPermissionsParams":
+        if self.mode is None and self.owner is None and self.group is None:
+            raise ValueError("set_permissions requires at least one of mode, owner, or group")
+        return self
 
 @dataclass(slots=True)
 class FileInfo:

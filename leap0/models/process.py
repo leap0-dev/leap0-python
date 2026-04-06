@@ -7,9 +7,14 @@ from .._schemas.process import ProcessResultDict
 class ProcessResult:
     """Result of a one-shot process execution."""
     exit_code: int
-    result: str
+    stdout: str
+    stderr: str
 
     @classmethod
     def from_dict(cls, data: ProcessResultDict) -> ProcessResult:
         """Build an instance from a wire-format dictionary."""
-        return cls(exit_code=int(data.get("exit_code", 0)), result=data.get("result", ""))
+        return cls(
+            exit_code=int(data.get("exit_code", 0)),
+            stdout=data.get("stdout", ""),
+            stderr=data.get("stderr", ""),
+        )

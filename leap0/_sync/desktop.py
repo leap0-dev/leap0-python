@@ -11,10 +11,12 @@ from tenacity import retry, retry_if_exception, stop_after_delay, wait_exponenti
 
 from .._internal.types import JsonObject
 from ..models.desktop import (
+    DesktopClickParams,
     DesktopDisplayInfo,
     DesktopDisplayInfoDict,
     DesktopHealth,
     DesktopHealthDict,
+    DesktopOkResponse,
     DesktopPointerPosition,
     DesktopPointerPositionDict,
     DesktopProcessErrors,
@@ -31,6 +33,10 @@ from ..models.desktop import (
     DesktopRecordingStatusDict,
     DesktopRecordingSummary,
     DesktopRecordingSummaryDict,
+    DesktopResizeScreenParams,
+    DesktopScreenshotParams,
+    DesktopScreenshotRegionParams,
+    DesktopStatusStreamErrorEvent,
     DesktopWindow,
     DesktopWindowsDict,
 )
@@ -146,11 +152,12 @@ class DesktopClient:
         Returns:
             object: Result returned by this operation.
         """
+        payload = DesktopResizeScreenParams(width=width, height=height).model_dump()
         data = cast(DesktopDisplayInfoDict, self._request_json(
             "POST",
             sandbox,
             "/api/display/screen",
-            json={"width": width, "height": height},
+            json=payload,
             http_timeout=http_timeout,
         ))
         return DesktopDisplayInfo.from_dict(data)
@@ -196,19 +203,14 @@ class DesktopClient:
         Returns:
             object: Result returned by this operation.
         """
-        params: JsonObject = {}
-        if image_format is not None:
-            params["format"] = image_format
-        if quality is not None:
-            params["quality"] = quality
-        if x is not None:
-            params["x"] = x
-        if y is not None:
-            params["y"] = y
-        if width is not None:
-            params["width"] = width
-        if height is not None:
-            params["height"] = height
+        params = DesktopScreenshotParams(
+            format=image_format,
+            quality=quality,
+            x=x,
+            y=y,
+            width=width,
+            height=height,
+        ).model_dump(exclude_none=True)
         response = self._request("GET", sandbox, "/api/screenshot", params=params or None, http_timeout=http_timeout)
         return response.content
 
@@ -234,11 +236,14 @@ class DesktopClient:
         Returns:
             object: Result returned by this operation.
         """
-        payload: JsonObject = {"x": x, "y": y, "width": width, "height": height}
-        if image_format is not None:
-            payload["format"] = image_format
-        if quality is not None:
-            payload["quality"] = quality
+        payload = DesktopScreenshotRegionParams(
+            x=x,
+            y=y,
+            width=width,
+            height=height,
+            format=image_format,
+            quality=quality,
+        ).model_dump(exclude_none=True)
         response = self._request("POST", sandbox, "/api/screenshot/region", json=payload, http_timeout=http_timeout)
         return response.content
 
@@ -291,13 +296,7 @@ class DesktopClient:
         Returns:
             object: Result returned by this operation.
         """
-        payload: JsonObject = {}
-        if x is not None:
-            payload["x"] = x
-        if y is not None:
-            payload["y"] = y
-        if button is not None:
-            payload["button"] = button
+        payload = DesktopClickParams(x=x, y=y, button=button).model_dump(exclude_none=True)
         data = cast(DesktopPointerPositionDict, self._request_json("POST", sandbox, "/api/input/click", json=payload, http_timeout=http_timeout))
         return DesktopPointerPosition.from_dict(data)
 
@@ -364,7 +363,7 @@ class DesktopClient:
             object: Result returned by this operation.
         """
         data = self._request_json("POST", sandbox, "/api/input/type", json={"text": text})
-        return bool(data.get("ok", False))
+        return DesktopOkResponse.model_validate(data).ok
 
     @intercept_errors("Failed to press key: ")
     def press_key(self, sandbox: SandboxRef, *, key: str, http_timeout: float | None = None) -> bool:
@@ -378,7 +377,7 @@ class DesktopClient:
             object: Result returned by this operation.
         """
         data = self._request_json("POST", sandbox, "/api/input/press", json={"key": key}, http_timeout=http_timeout)
-        return bool(data.get("ok", False))
+        return DesktopOkResponse.model_validate(data).ok
 
     @intercept_errors("Failed to press hotkey: ")
     def hotkey(self, sandbox: SandboxRef, *, keys: list[str]) -> bool:
@@ -392,7 +391,7 @@ class DesktopClient:
             object: Result returned by this operation.
         """
         data = self._request_json("POST", sandbox, "/api/input/hotkey", json={"keys": keys})
-        return bool(data.get("ok", False))
+        return DesktopOkResponse.model_validate(data).ok
 
     @intercept_errors("Failed to get recording status: ")
     def recording_status(self, sandbox: SandboxRef, http_timeout: float | None = None) -> DesktopRecordingStatus:
@@ -640,6 +639,9 @@ class DesktopClient:
                         "Desktop status stream error",
                         body=str(event["error"]),
                     )
+                if {"error", "message"}.intersection(event) and not {"status", "items", "running", "total"}.intersection(event):
+                    error_event = DesktopStatusStreamErrorEvent.model_validate(event)
+                    raise Leap0Error("Desktop status stream error", body=error_event.detail)
                 yield DesktopProcessStatusList.from_dict(cast(DesktopProcessStatusListDict, event))
         finally:
             response.close()
@@ -676,7 +678,7 @@ class DesktopClient:
         )
         def _poll() -> None:
             for status in self.status_stream(sandbox, deadline=deadline, http_timeout=http_timeout):
-                if status.status == "running":
+                if status.status == "running" or (status.total > 0 and status.running >= status.total):
                     return
             raise Leap0Error("Desktop status stream ended without reaching 'running' state", retryable=True)
 

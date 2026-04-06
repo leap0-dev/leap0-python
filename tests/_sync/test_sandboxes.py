@@ -178,3 +178,24 @@ class TestRichSandbox:
         sandbox.refresh()
 
         assert sandbox.state == "running"
+
+    def test_pause_forwards_http_timeout(self):
+        sandboxes = MagicMock()
+        client = SimpleNamespace(
+            _filesystem=MagicMock(),
+            _git=MagicMock(),
+            _process=MagicMock(),
+            _pty=MagicMock(),
+            _lsp=MagicMock(),
+            _ssh=MagicMock(),
+            _code_interpreter=MagicMock(),
+            _desktop=MagicMock(),
+            sandboxes=sandboxes,
+        )
+        sandbox = RichSandbox(client, Sandbox(id="sbx-1", state="running"))
+        sandboxes.pause.return_value = RichSandbox(client, Sandbox(id="sbx-1", state="paused"))
+
+        sandbox.pause(http_timeout=7.5)
+
+        sandboxes.pause.assert_called_once_with(sandbox, http_timeout=7.5)
+        assert sandbox.state == "paused"
