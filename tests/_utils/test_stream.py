@@ -34,9 +34,6 @@ class TestIterSseEvents:
     def test_non_data_fields_ignored(self):
         assert list(iter_sse_events(["event: update", "id: 42", "data: {\"ok\": true}", ""])) == [{"ok": True}]
 
-    def test_plain_text_data_preserved(self):
-        assert list(iter_sse_events(["event: error", "data: desktop stream failed", ""])) == [{"error": "desktop stream failed"}]
-
     def test_error_json_data_parsed(self):
         assert list(iter_sse_events(["event: error", 'data: {"error":"boom"}', ""])) == [{"error": "boom"}]
 

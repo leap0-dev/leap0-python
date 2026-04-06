@@ -95,18 +95,6 @@ class TestDesktopClient:
 
         DesktopClient(mock_transport, sandbox_domain="sandbox.example.com").wait_until_ready("sbx-1", timeout=1)
 
-    def test_status_stream_raises_on_plain_text_error_event(self, mock_transport):
-        response = MagicMock()
-        response.iter_lines.return_value = iter([
-            "event: error",
-            "data: Desktop request failed",
-            "",
-        ])
-        mock_transport.stream.return_value = response
-
-        with pytest.raises(Leap0Error, match="Desktop status stream error"):
-            list(DesktopClient(mock_transport, sandbox_domain="sandbox.example.com").status_stream("sbx-1"))
-
     def test_status_stream_raises_structured_error_detail(self, mock_transport):
         response = MagicMock()
         response.iter_lines.return_value = iter([

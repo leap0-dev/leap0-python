@@ -124,19 +124,18 @@ class DesktopStatusStreamErrorEvent(BaseModel):
 
     model_config = ConfigDict(extra="allow")
 
-    error: str | None = None
-    message: str | None = None
+    message: str
 
     @model_validator(mode="after")
     def _validate_error(self) -> "DesktopStatusStreamErrorEvent":
-        if self.error is None and self.message is None:
-            raise ValueError("Desktop status stream error event must include error or message")
+        if not self.message.strip():
+            raise ValueError("Desktop status stream error event must include a non-empty message")
         return self
 
     @property
     def detail(self) -> str:
         """Return the normalized human-readable error detail."""
-        return self.error or self.message or "unknown desktop status stream error"
+        return self.message
 
 def _require_str(data: dict[str, Any], field: str) -> str:
     value = data.get(field)
