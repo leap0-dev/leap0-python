@@ -5,6 +5,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from leap0._sync.filesystem import FilesystemClient, _parse_multipart_response
+from leap0.models.errors import Leap0Error
 from leap0.models.filesystem import FileEdit
 
 
@@ -51,17 +52,17 @@ class TestFilesystemClient:
         assert FilesystemClient(mock_transport).read_bytes("sbx-1", path="/workspace/hello.bin") == b"Hello"
 
     def test_read_bytes_rejects_head_and_tail(self, mock_transport):
-        with pytest.raises(Exception, match="mutually exclusive"):
+        with pytest.raises(Leap0Error, match="mutually exclusive"):
             FilesystemClient(mock_transport).read_bytes("sbx-1", path="/workspace/hello.bin", head=1, tail=1)
 
     def test_set_permissions_rejects_missing_or_blank_updates(self, mock_transport):
         client = FilesystemClient(mock_transport)
 
-        with pytest.raises(Exception, match="at least one of mode, owner, or group"):
+        with pytest.raises(Leap0Error, match="at least one of mode, owner, or group"):
             client.set_permissions("sbx-1", path="/workspace/a.txt")
-        with pytest.raises(Exception, match="mode must be a non-empty string"):
+        with pytest.raises(Leap0Error, match="mode must be a non-empty string"):
             client.set_permissions("sbx-1", path="/workspace/a.txt", mode="   ")
-        with pytest.raises(Exception, match="owner must be a non-empty string"):
+        with pytest.raises(Leap0Error, match="owner must be a non-empty string"):
             client.set_permissions("sbx-1", path="/workspace/a.txt", owner="")
 
         assert mock_transport.request.call_count == 0

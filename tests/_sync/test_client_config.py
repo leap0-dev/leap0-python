@@ -59,3 +59,11 @@ def test_legacy_otel_env_no_longer_enables_sdk(monkeypatch):
     config = Leap0Config()
 
     assert config.sdk_otel_enabled is False
+
+
+def test_blank_otel_endpoint_does_not_enable_sdk(monkeypatch):
+    monkeypatch.setenv("LEAP0_API_KEY", "test-key")
+    monkeypatch.delenv("LEAP0_SDK_OTEL_ENABLED", raising=False)
+    monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "   ")
+
+    assert Leap0Config().sdk_otel_enabled is False

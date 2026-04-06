@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import Enum
 import ipaddress
@@ -83,8 +84,15 @@ def _validate_network_policy(policy: NetworkPolicyDict | None) -> NetworkPolicyD
     if transforms is not None:
         if len(transforms) > 20:
             raise ValueError("network_policy.transforms must contain at most 20 entries")
-        for transform in transforms:
-            _validate_domain_pattern(transform["domain"])
+        for index, transform in enumerate(transforms):
+            if not isinstance(transform, Mapping):
+                raise ValueError(f"network_policy.transforms[{index}] must be a mapping, got: {transform!r}")
+            domain = transform.get("domain")
+            if domain is None:
+                raise ValueError(f"network_policy.transforms[{index}] missing required 'domain': {transform!r}")
+            if not isinstance(domain, str):
+                raise ValueError(f"network_policy.transforms[{index}].domain must be a string, got: {domain!r}")
+            _validate_domain_pattern(domain)
 
     return policy
 

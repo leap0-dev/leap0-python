@@ -21,15 +21,15 @@ def _sse_data_value(raw: str) -> str:
     return value
 
 
-def _parse_sse_data(data: str) -> dict[str, Any] | str:
+def _parse_sse_data(data: str) -> Any:
     try:
         parsed = json.loads(data)
     except json.JSONDecodeError:
         return data
-    return parsed if isinstance(parsed, dict) else data
+    return parsed if isinstance(parsed, (dict, list)) else data
 
 
-def _emit_sse_event(buffer: list[str]) -> dict[str, Any] | str | None:
+def _emit_sse_event(buffer: list[str]) -> dict[str, Any] | list[Any] | str | None:
     data_lines = [_sse_data_value(item) for item in buffer if item.startswith("data:")]
     if not data_lines:
         return None
@@ -41,11 +41,16 @@ def _emit_sse_event(buffer: list[str]) -> dict[str, Any] | str | None:
 
     data = "\n".join(data_lines)
     if event_name == "error":
+        parsed = _parse_sse_data(data)
+        if isinstance(parsed, dict):
+            return parsed
+        if isinstance(parsed, list):
+            return {"error": parsed}
         return {"error": data}
     return _parse_sse_data(data)
 
 
-def iter_sse_events(lines: Iterable[str]) -> Iterator[dict[str, Any] | str]:
+def iter_sse_events(lines: Iterable[str]) -> Iterator[dict[str, Any] | list[Any] | str]:
     """Yield parsed events from an SSE line iterator."""
     buffer: list[str] = []
     for line in lines:
@@ -66,7 +71,7 @@ def iter_sse_events(lines: Iterable[str]) -> Iterator[dict[str, Any] | str]:
             yield event
 
 
-async def aiter_sse_events(lines: AsyncIterable[str]) -> AsyncIterator[dict[str, Any] | str]:
+async def aiter_sse_events(lines: AsyncIterable[str]) -> AsyncIterator[dict[str, Any] | list[Any] | str]:
     """Yield parsed events from an asynchronous SSE line iterator."""
     buffer: list[str] = []
     async for line in lines:

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from leap0.models.sandbox import CreateSandboxParams, Sandbox, SandboxStatus, sandbox_id_of
+from leap0.models.sandbox import CreateSandboxParams, Sandbox, SandboxStatus, _validate_network_policy, sandbox_id_of
 
 
 class TestSandboxIdOf:
@@ -67,3 +67,9 @@ class TestCreateSandboxParams:
 
         with pytest.raises(ValueError, match="allow_domains must contain at most 50"):
             CreateSandboxParams(network_policy={"mode": "custom", "allow_domains": ["a.example.com"] * 51})
+
+        with pytest.raises(ValueError, match=r"transforms\[0\] missing required 'domain'"):
+            _validate_network_policy({"mode": "custom", "transforms": [{"rewrite": "x"}]})
+
+        with pytest.raises(ValueError, match=r"transforms\[0\] must be a mapping"):
+            _validate_network_policy({"mode": "custom", "transforms": ["bad"]})

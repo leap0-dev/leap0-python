@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 from leap0.models.desktop import (
-    DesktopDisplayInfo, DesktopHealth, DesktopPointerPosition, DesktopProcessErrors,
+    DesktopClickParams, DesktopDisplayInfo, DesktopHealth, DesktopPointerPosition, DesktopProcessErrors,
     DesktopProcessLogs, DesktopProcessRestart, DesktopProcessStatus, DesktopProcessStatusList,
     DesktopRecordingStatus, DesktopRecordingSummary, DesktopWindow,
 )
@@ -63,11 +63,17 @@ class TestDesktopProcessStatus:
                 "name": "xvfb",
                 "running": True,
                 "pid": 123,
-                "stdout_log": "/tmp/xvfb.stdout.log",
-                "stderr_log": "/tmp/xvfb.stderr.log",
+                "stdout_log": "placeholder/xvfb.stdout.log",
+                "stderr_log": "placeholder/xvfb.stderr.log",
             }
         )
         assert p.running is True
+
+
+class TestDesktopClickParams:
+    def test_rejects_invalid_button(self):
+        with pytest.raises(ValueError, match="button must be one of: 1, 2, 3"):
+            DesktopClickParams(button=4)
 
 
 class TestDesktopProcessStatusList:
@@ -80,8 +86,8 @@ class TestDesktopProcessStatusList:
                         "name": "xvfb",
                         "running": True,
                         "pid": 1,
-                        "stdout_log": "/tmp/xvfb.stdout.log",
-                        "stderr_log": "/tmp/xvfb.stderr.log",
+                        "stdout_log": "placeholder/xvfb.stdout.log",
+                        "stderr_log": "placeholder/xvfb.stderr.log",
                     }
                 ],
                 "running": 1,
@@ -95,6 +101,10 @@ class TestDesktopProcessStatusList:
         with pytest.raises(ValueError, match="missing array 'items'"):
             DesktopProcessStatusList.from_dict({})
 
+    def test_rejects_non_mapping_item(self):
+        with pytest.raises(TypeError, match="item at index 0 must be a mapping"):
+            DesktopProcessStatusList.from_dict({"status": "running", "items": ["bad"], "running": 0, "total": 1})
+
 
 class TestDesktopProcessRestart:
     def test_with_status(self):
@@ -105,8 +115,8 @@ class TestDesktopProcessRestart:
                     "name": "xvfb",
                     "running": True,
                     "pid": 42,
-                    "stdout_log": "/tmp/xvfb.stdout.log",
-                    "stderr_log": "/tmp/xvfb.stderr.log",
+                    "stdout_log": "placeholder/xvfb.stdout.log",
+                    "stderr_log": "placeholder/xvfb.stderr.log",
                 },
             }
         )

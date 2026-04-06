@@ -7,6 +7,7 @@ from collections.abc import Iterator
 from typing import cast
 
 import httpx
+from pydantic import ValidationError
 from tenacity import retry, retry_if_exception, stop_after_delay, wait_exponential
 
 from .._internal.types import JsonObject
@@ -633,16 +634,20 @@ class DesktopClient:
                         "Malformed desktop status stream event "
                         f"for sandbox={sandbox_id_of(sandbox)!r}, source='status_stream': {event!r}"
                     )
-                # Explicit error envelope from the server.
-                if "error" in event:
-                    raise Leap0Error(
-                        "Desktop status stream error",
-                        body=str(event["error"]),
-                    )
-                if {"error", "message"}.intersection(event) and not {"status", "items", "running", "total"}.intersection(event):
-                    error_event = DesktopStatusStreamErrorEvent.model_validate(event)
-                    raise Leap0Error("Desktop status stream error", body=error_event.detail)
-                yield DesktopProcessStatusList.from_dict(cast(DesktopProcessStatusListDict, event))
+                try:
+                    yield DesktopProcessStatusList.from_dict(cast(DesktopProcessStatusListDict, event))
+                    continue
+                except (TypeError, ValueError) as status_error:
+                    try:
+                        error_event = DesktopStatusStreamErrorEvent.model_validate(event)
+                    except ValidationError:
+                        if "error" in event:
+                            raise Leap0Error(
+                                "Desktop status stream error",
+                                body=str(event["error"]),
+                            ) from status_error
+                        raise status_error
+                    raise Leap0Error("Desktop status stream error", body=error_event.detail) from status_error
         finally:
             response.close()
 

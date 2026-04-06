@@ -38,7 +38,8 @@ def _resolve_sdk_otel_enabled(value: bool | None) -> bool:
     sdk_otel_env = os.environ.get(LEAP0_SDK_OTEL_ENABLED_ENV)
     sdk_otel_env = sdk_otel_env.strip() if sdk_otel_env is not None else None
     if not sdk_otel_env:
-        return bool(os.environ.get(OTEL_EXPORTER_OTLP_ENDPOINT_ENV))
+        endpoint = os.environ.get(OTEL_EXPORTER_OTLP_ENDPOINT_ENV)
+        return bool(endpoint and endpoint.strip())
 
     lowered = sdk_otel_env.lower()
     if lowered == "true":
