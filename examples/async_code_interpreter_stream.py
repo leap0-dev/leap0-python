@@ -6,7 +6,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from leap0 import AsyncLeap0Client, AsyncSandbox, DEFAULT_CODE_INTERPRETER_TEMPLATE_NAME, StreamEvent
+from leap0 import AsyncLeap0Client, AsyncSandbox, CodeLanguage, DEFAULT_CODE_INTERPRETER_TEMPLATE_NAME, StreamEvent
 
 
 async def main() -> None:
@@ -16,7 +16,7 @@ async def main() -> None:
         try:
             async for event in sandbox.code_interpreter.execute_stream(
                 code="import time\nfor i in range(3):\n    print(f'async step {i}')\n    time.sleep(1)",
-                language="python",
+                language=CodeLanguage.PYTHON,
                 timeout_ms=10_000,
             ):
                 typed_event: StreamEvent = event

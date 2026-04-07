@@ -4,7 +4,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from leap0 import DEFAULT_CODE_INTERPRETER_TEMPLATE_NAME, Leap0Client, Sandbox, StreamEvent
+from leap0 import CodeLanguage, DEFAULT_CODE_INTERPRETER_TEMPLATE_NAME, Leap0Client, Sandbox, StreamEvent
 
 
 def main() -> None:
@@ -15,7 +15,7 @@ def main() -> None:
         event: StreamEvent
         for event in sandbox.code_interpreter.execute_stream(
             code="import time\nfor i in range(3):\n    print(f'step {i}')\n    time.sleep(1)",
-            language="python",
+            language=CodeLanguage.PYTHON,
             timeout_ms=10_000,
         ):
             print(event)
