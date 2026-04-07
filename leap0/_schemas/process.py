@@ -7,4 +7,3 @@ class ProcessResultDict(TypedDict, total=False):
     exit_code: int
     stdout: str
     stderr: str
-    result: object

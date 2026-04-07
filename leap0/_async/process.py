@@ -2,12 +2,11 @@ from __future__ import annotations
 
 from typing import cast
 
-from .._internal.types import JsonObject
-from .._utils.env import expand_env
 from ..models.process import ProcessResult
 from ..models.sandbox import SandboxRef, sandbox_id_of
 from .._schemas.process import ProcessResultDict
 from .._utils.errors import intercept_errors
+from .._utils.process import build_command_payload
 from ._transport import AsyncTransport
 
 
@@ -49,10 +48,6 @@ class AsyncProcessClient:
             print(result.stderr)
             ```
         """
-        payload: JsonObject = {"command": expand_env(command, env) if env else command}
-        if cwd is not None:
-            payload["cwd"] = expand_env(cwd, env) if env else cwd
-        if timeout is not None:
-            payload["timeout"] = timeout
+        payload = build_command_payload(command=command, cwd=cwd, timeout=timeout, env=env)
         data = cast(ProcessResultDict, await self._transport.request_json("POST", f"/v1/sandbox/{sandbox_id_of(sandbox)}/process/execute", json=payload))
         return ProcessResult.from_dict(data)
