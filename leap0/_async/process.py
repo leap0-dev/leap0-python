@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import cast
 
 from .._internal.types import JsonObject
+from .._utils.env import expand_env
 from ..models.process import ProcessResult
 from ..models.sandbox import SandboxRef, sandbox_id_of
 from .._schemas.process import ProcessResultDict
@@ -24,7 +25,7 @@ class AsyncProcessClient:
         self._transport = transport
 
     @intercept_errors("Failed to execute command: ")
-    async def execute(self, sandbox: SandboxRef, *, command: str, cwd: str | None = None, timeout: int | None = None) -> ProcessResult:
+    async def execute(self, sandbox: SandboxRef, *, command: str, cwd: str | None = None, timeout: int | None = None, env: dict[str, str] | None = None) -> ProcessResult:
         """Run a shell command and wait for the result.
 
         The command runs inside ``/bin/sh -c``.
@@ -34,6 +35,7 @@ class AsyncProcessClient:
             command: Shell command to execute.
             cwd: Working directory.
             timeout: Timeout in seconds (default 30).
+            env: Optional local values used to expand ``$NAME`` and ``${NAME}`` in string fields before sending the request.
 
         Returns:
             ProcessResult: Command result including exit code, stdout, and stderr.
@@ -47,9 +49,9 @@ class AsyncProcessClient:
             print(result.stderr)
             ```
         """
-        payload: JsonObject = {"command": command}
+        payload: JsonObject = {"command": expand_env(command, env) if env else command}
         if cwd is not None:
-            payload["cwd"] = cwd
+            payload["cwd"] = expand_env(cwd, env) if env else cwd
         if timeout is not None:
             payload["timeout"] = timeout
         data = cast(ProcessResultDict, await self._transport.request_json("POST", f"/v1/sandbox/{sandbox_id_of(sandbox)}/process/execute", json=payload))

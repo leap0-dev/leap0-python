@@ -20,6 +20,7 @@ from leap0 import (
     AzureRegistryCredentialsDict,
     BasicRegistryCredentials,
     BasicRegistryCredentialsDict,
+    CodeLanguage,
     CreatePtySessionParams,
     CreateSandboxParams,
     CreateSnapshotParams,
@@ -39,6 +40,7 @@ from leap0 import (
     Sandbox,
     SandboxesClient,
     SnapshotsClient,
+    StreamEventType,
     TemplatesClient,
 )
 
@@ -87,6 +89,8 @@ def test_service_client_imports() -> None:
     assert CreateTemplateParams is not None
     assert RenameTemplateParams is not None
     assert CreatePtySessionParams is not None
+    assert CodeLanguage.PYTHON == "python"
+    assert StreamEventType.STDOUT == "stdout"
     assert DEFAULT_TEMPLATE_NAME == "system/debian:bookworm"
     assert DEFAULT_CODE_INTERPRETER_TEMPLATE_NAME == "system/code-interpreter:v0.1.0"
 

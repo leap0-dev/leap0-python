@@ -118,6 +118,12 @@ Execute one-shot shell commands inside a running sandbox.
 ```python
 result = sandbox.process.execute(command="ls -la /workspace")
 print(result.result)
+
+templated = sandbox.process.execute(
+    command="echo $NAME from ${PLACE}",
+    cwd="/workspace/$NAME",
+    env={"NAME": "leap0", "PLACE": "sandbox"},
+)
 ```
 
 ### Interactive Terminal (PTY)

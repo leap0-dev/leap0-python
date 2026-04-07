@@ -19,12 +19,14 @@ if TYPE_CHECKING:
     from ._sync.client import Leap0, Leap0Client
     from ._sync.code_interpreter import CodeInterpreterClient
     from .models.code_interpreter import (
+        CodeLanguage,
         CodeContext,
         CodeExecutionError,
         CodeExecutionOutput,
         CodeExecutionResult,
         ExecutionLogs,
         StreamEvent,
+        StreamEventType,
     )
     from .models.config import (
         DEFAULT_CODE_INTERPRETER_TEMPLATE_NAME,
@@ -133,6 +135,7 @@ __all__ = [
     "AzureRegistryCredentialsDict",
     "BasicRegistryCredentials",
     "BasicRegistryCredentialsDict",
+    "CodeLanguage",
     "CodeContext",
     "CodeExecutionError",
     "CodeExecutionOutput",
@@ -207,6 +210,7 @@ __all__ = [
     "SshClient",
     "SshValidation",
     "StreamEvent",
+    "StreamEventType",
     "sandbox_id_of",
     "Template",
     "TemplatesClient",
@@ -300,12 +304,14 @@ _DYNAMIC_IMPORTS: dict[str, tuple[str, str]] = {
     "RegistryCredentialsInput": (".models.template", "RegistryCredentialsInput"),
     "Template": (".models.template", "Template"),
     "RenameTemplateParams": (".models.template", "RenameTemplateParams"),
+    "CodeLanguage": (".models.code_interpreter", "CodeLanguage"),
     "CodeContext": (".models.code_interpreter", "CodeContext"),
     "CodeExecutionError": (".models.code_interpreter", "CodeExecutionError"),
     "CodeExecutionOutput": (".models.code_interpreter", "CodeExecutionOutput"),
     "CodeExecutionResult": (".models.code_interpreter", "CodeExecutionResult"),
     "ExecutionLogs": (".models.code_interpreter", "ExecutionLogs"),
     "StreamEvent": (".models.code_interpreter", "StreamEvent"),
+    "StreamEventType": (".models.code_interpreter", "StreamEventType"),
     "DesktopDisplayInfo": (".models.desktop", "DesktopDisplayInfo"),
     "DesktopHealth": (".models.desktop", "DesktopHealth"),
     "DesktopPointerPosition": (".models.desktop", "DesktopPointerPosition"),
