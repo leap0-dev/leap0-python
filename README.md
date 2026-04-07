@@ -51,7 +51,7 @@ sandbox = client.sandboxes.create()
 
 try:
     result = sandbox.process.execute(command="echo hello from leap0")
-    print(result.result.strip())
+    print(result.stdout.strip())
 finally:
     sandbox.delete()
     client.close()
@@ -65,7 +65,7 @@ from leap0 import Leap0Client
 with Leap0Client(api_key="your-api-key") as client:
     sandbox = client.sandboxes.create()
     result = sandbox.process.execute(command="echo hello from the sandbox")
-    print(result.result.strip())
+    print(result.stdout.strip())
     sandbox.delete()
 ```
 
@@ -117,13 +117,14 @@ Execute one-shot shell commands inside a running sandbox.
 
 ```python
 result = sandbox.process.execute(command="ls -la /workspace")
-print(result.result)
+print(result.stdout)
 
-templated = sandbox.process.execute(
+interpolated = sandbox.process.execute(
     command="echo $NAME from ${PLACE}",
     cwd="/workspace/$NAME",
     env={"NAME": "leap0", "PLACE": "sandbox"},
 )
+print(interpolated.stdout)
 ```
 
 ### Interactive Terminal (PTY)
