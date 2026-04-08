@@ -24,7 +24,7 @@ class AsyncProcessClient:
         self._transport = transport
 
     @intercept_errors("Failed to execute command: ")
-    async def execute(self, sandbox: SandboxRef, *, command: str, cwd: str | None = None, timeout: int | None = None, env: dict[str, str] | None = None) -> ProcessResult:
+    async def execute(self, sandbox: SandboxRef, *, command: str, cwd: str | None = None, env: dict[str, str] | None = None, timeout: int | None = None) -> ProcessResult:
         """Run a shell command and wait for the result.
 
         The command runs inside ``/bin/sh -c``.
@@ -33,8 +33,8 @@ class AsyncProcessClient:
             sandbox: Sandbox ID or object.
             command: Shell command to execute.
             cwd: Working directory.
+            env: Optional environment variables applied to the spawned process.
             timeout: Timeout in seconds (default 30).
-            env: Optional local values used to expand ``$NAME`` and ``${NAME}`` in string fields before sending the request.
 
         Returns:
             ProcessResult: Command result including exit code, stdout, and stderr.
@@ -48,6 +48,6 @@ class AsyncProcessClient:
             print(result.stderr)
             ```
         """
-        payload = build_command_payload(command=command, cwd=cwd, timeout=timeout, env=env)
+        payload = build_command_payload(command=command, cwd=cwd, env=env, timeout=timeout)
         data = cast(ProcessResultDict, await self._transport.request_json("POST", f"/v1/sandbox/{sandbox_id_of(sandbox)}/process/execute", json=payload))
         return ProcessResult.from_dict(data)

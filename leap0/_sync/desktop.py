@@ -117,7 +117,7 @@ class DesktopClient:
         return f"{sandbox_base_url(sandbox_id_of(sandbox), self._sandbox_domain)}/"
 
     @intercept_errors("Failed to get display info: ")
-    def display_info(self, sandbox: SandboxRef) -> DesktopDisplayInfo:
+    def display_info(self, sandbox: SandboxRef, http_timeout: float | None = None) -> DesktopDisplayInfo:
         """Get display information (display name, width, height).
         
         Args:
@@ -126,11 +126,11 @@ class DesktopClient:
         Returns:
             object: Result returned by this operation.
         """
-        data = cast(DesktopDisplayInfoDict, self._request_json("GET", sandbox, "/api/display"))
+        data = cast(DesktopDisplayInfoDict, self._request_json("GET", sandbox, "/api/display", http_timeout=http_timeout))
         return DesktopDisplayInfo.from_dict(data)
 
     @intercept_errors("Failed to get screen info: ")
-    def screen(self, sandbox: SandboxRef) -> DesktopDisplayInfo:
+    def screen(self, sandbox: SandboxRef, http_timeout: float | None = None) -> DesktopDisplayInfo:
         """Get the current screen resolution.
         
         Args:
@@ -139,7 +139,7 @@ class DesktopClient:
         Returns:
             object: Result returned by this operation.
         """
-        data = cast(DesktopDisplayInfoDict, self._request_json("GET", sandbox, "/api/display/screen"))
+        data = cast(DesktopDisplayInfoDict, self._request_json("GET", sandbox, "/api/display/screen", http_timeout=http_timeout))
         return DesktopDisplayInfo.from_dict(data)
 
     @intercept_errors("Failed to resize screen: ")
@@ -164,7 +164,7 @@ class DesktopClient:
         return DesktopDisplayInfo.from_dict(data)
 
     @intercept_errors("Failed to list windows: ")
-    def windows(self, sandbox: SandboxRef) -> list[DesktopWindow]:
+    def windows(self, sandbox: SandboxRef, http_timeout: float | None = None) -> list[DesktopWindow]:
         """List all open windows on the desktop.
         
         Args:
@@ -173,7 +173,7 @@ class DesktopClient:
         Returns:
             object: Result returned by this operation.
         """
-        data = cast(DesktopWindowsDict, self._request_json("GET", sandbox, "/api/display/windows"))
+        data = cast(DesktopWindowsDict, self._request_json("GET", sandbox, "/api/display/windows", http_timeout=http_timeout))
         return [DesktopWindow.from_dict(item) for item in data.get("items", [])]
 
     @intercept_errors("Failed to take screenshot: ")
@@ -249,7 +249,7 @@ class DesktopClient:
         return response.content
 
     @intercept_errors("Failed to get pointer position: ")
-    def pointer_position(self, sandbox: SandboxRef) -> DesktopPointerPosition:
+    def pointer_position(self, sandbox: SandboxRef, http_timeout: float | None = None) -> DesktopPointerPosition:
         """Get the current mouse pointer position.
         
         Args:
@@ -258,7 +258,7 @@ class DesktopClient:
         Returns:
             object: Result returned by this operation.
         """
-        data = cast(DesktopPointerPositionDict, self._request_json("GET", sandbox, "/api/input/position"))
+        data = cast(DesktopPointerPositionDict, self._request_json("GET", sandbox, "/api/input/position", http_timeout=http_timeout))
         return DesktopPointerPosition.from_dict(data)
 
     @intercept_errors("Failed to move pointer: ")
@@ -353,7 +353,7 @@ class DesktopClient:
         return DesktopPointerPosition.from_dict(data)
 
     @intercept_errors("Failed to type text: ")
-    def type_text(self, sandbox: SandboxRef, *, text: str) -> bool:
+    def type_text(self, sandbox: SandboxRef, *, text: str, http_timeout: float | None = None) -> bool:
         """Type text using simulated keyboard input (max 50,000 characters).
         
         Args:
@@ -363,7 +363,7 @@ class DesktopClient:
         Returns:
             object: Result returned by this operation.
         """
-        data = self._request_json("POST", sandbox, "/api/input/type", json={"text": text})
+        data = self._request_json("POST", sandbox, "/api/input/type", json={"text": text}, http_timeout=http_timeout)
         return DesktopOkResponse.model_validate(data).ok
 
     @intercept_errors("Failed to press key: ")
@@ -381,7 +381,7 @@ class DesktopClient:
         return DesktopOkResponse.model_validate(data).ok
 
     @intercept_errors("Failed to press hotkey: ")
-    def hotkey(self, sandbox: SandboxRef, *, keys: list[str]) -> bool:
+    def hotkey(self, sandbox: SandboxRef, *, keys: list[str], http_timeout: float | None = None) -> bool:
         """Press multiple keys simultaneously (e.g. ``["Control_L", "c"]``).
         
         Args:
@@ -391,7 +391,7 @@ class DesktopClient:
         Returns:
             object: Result returned by this operation.
         """
-        data = self._request_json("POST", sandbox, "/api/input/hotkey", json={"keys": keys})
+        data = self._request_json("POST", sandbox, "/api/input/hotkey", json={"keys": keys}, http_timeout=http_timeout)
         return DesktopOkResponse.model_validate(data).ok
 
     @intercept_errors("Failed to get recording status: ")
@@ -409,7 +409,7 @@ class DesktopClient:
         return DesktopRecordingStatus.from_dict(data)
 
     @intercept_errors("Failed to start recording: ")
-    def start_recording(self, sandbox: SandboxRef) -> DesktopRecordingStatus:
+    def start_recording(self, sandbox: SandboxRef, http_timeout: float | None = None) -> DesktopRecordingStatus:
         """Start recording the screen. Returns 409 if a recording is already active.
         
         Args:
@@ -418,7 +418,7 @@ class DesktopClient:
         Returns:
             object: Result returned by this operation.
         """
-        data = cast(DesktopRecordingStatusDict, self._request_json("POST", sandbox, "/api/recording/start", expected_status=201))
+        data = cast(DesktopRecordingStatusDict, self._request_json("POST", sandbox, "/api/recording/start", expected_status=201, http_timeout=http_timeout))
         return DesktopRecordingStatus.from_dict(data)
 
     @intercept_errors("Failed to stop recording: ")
@@ -436,7 +436,7 @@ class DesktopClient:
         return DesktopRecordingStatus.from_dict(data)
 
     @intercept_errors("Failed to list recordings: ")
-    def recordings(self, sandbox: SandboxRef) -> list[DesktopRecordingSummary]:
+    def recordings(self, sandbox: SandboxRef, http_timeout: float | None = None) -> list[DesktopRecordingSummary]:
         """List all screen recordings.
         
         Args:
@@ -445,7 +445,7 @@ class DesktopClient:
         Returns:
             object: Result returned by this operation.
         """
-        raw = self._request_json("GET", sandbox, "/api/recordings")
+        raw = self._request_json("GET", sandbox, "/api/recordings", http_timeout=http_timeout)
         items = cast(list[DesktopRecordingSummaryDict], raw.get("items", []))
         return [DesktopRecordingSummary.from_dict(item) for item in items]
 
@@ -464,7 +464,7 @@ class DesktopClient:
         return DesktopRecordingSummary.from_dict(data)
 
     @intercept_errors("Failed to download recording: ")
-    def download_recording(self, sandbox: SandboxRef, recording_id: str) -> bytes:
+    def download_recording(self, sandbox: SandboxRef, recording_id: str, http_timeout: float | None = None) -> bytes:
         """Download a recording as MP4 bytes.
         
         Args:
@@ -474,7 +474,7 @@ class DesktopClient:
         Returns:
             object: Result returned by this operation.
         """
-        response = self._request("GET", sandbox, f"/api/recordings/{recording_id}/download")
+        response = self._request("GET", sandbox, f"/api/recordings/{recording_id}/download", http_timeout=http_timeout)
         return response.content
 
     @intercept_errors("Failed to delete recording: ")
@@ -488,7 +488,7 @@ class DesktopClient:
         self._request("DELETE", sandbox, f"/api/recordings/{recording_id}", expected_status=204, http_timeout=http_timeout)
 
     @intercept_errors("Failed to check desktop health: ")
-    def health(self, sandbox: SandboxRef) -> DesktopHealth:
+    def health(self, sandbox: SandboxRef, http_timeout: float | None = None) -> DesktopHealth:
         """Check the health of the desktop environment.
         
         Args:
@@ -497,7 +497,7 @@ class DesktopClient:
         Returns:
             object: Result returned by this operation.
         """
-        data = cast(DesktopHealthDict, self._request_json("GET", sandbox, "/api/healthz", expected_status=(200, 503)))
+        data = cast(DesktopHealthDict, self._request_json("GET", sandbox, "/api/healthz", expected_status=(200, 503), http_timeout=http_timeout))
         return DesktopHealth.from_dict(data)
 
     @intercept_errors("Failed to get process status: ")
@@ -515,7 +515,7 @@ class DesktopClient:
         return DesktopProcessStatusList.from_dict(data)
 
     @intercept_errors("Failed to get process: ")
-    def get_process(self, sandbox: SandboxRef, process_name: str) -> DesktopProcessStatus:
+    def get_process(self, sandbox: SandboxRef, process_name: str, http_timeout: float | None = None) -> DesktopProcessStatus:
         """Get the status of a single desktop process by name.
         
         Args:
@@ -525,7 +525,7 @@ class DesktopClient:
         Returns:
             object: Result returned by this operation.
         """
-        data = cast(DesktopProcessStatusDict, self._request_json("GET", sandbox, f"/api/process/{process_name}/status"))
+        data = cast(DesktopProcessStatusDict, self._request_json("GET", sandbox, f"/api/process/{process_name}/status", http_timeout=http_timeout))
         return DesktopProcessStatus.from_dict(data)
 
     @intercept_errors("Failed to restart process: ")
@@ -543,7 +543,7 @@ class DesktopClient:
         return DesktopProcessRestart.from_dict(data)
 
     @intercept_errors("Failed to get process logs: ")
-    def process_logs(self, sandbox: SandboxRef, process_name: str) -> DesktopProcessLogs:
+    def process_logs(self, sandbox: SandboxRef, process_name: str, http_timeout: float | None = None) -> DesktopProcessLogs:
         """Get stdout logs for a desktop process.
         
         Args:
@@ -553,7 +553,7 @@ class DesktopClient:
         Returns:
             object: Result returned by this operation.
         """
-        data = cast(DesktopProcessLogsDict, self._request_json("GET", sandbox, f"/api/process/{process_name}/logs"))
+        data = cast(DesktopProcessLogsDict, self._request_json("GET", sandbox, f"/api/process/{process_name}/logs", http_timeout=http_timeout))
         return DesktopProcessLogs.from_dict(data)
 
     @intercept_errors("Failed to get process errors: ")

@@ -3,13 +3,15 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from .._internal.types import JsonObject
-from .env import expand_env
 
 
-def build_command_payload(*, command: str, cwd: str | None = None, timeout: int | None = None, env: Mapping[str, str] | None = None) -> JsonObject:
-    payload: JsonObject = {"command": expand_env(command, env) if env else command}
+def build_command_payload(*, command: str, cwd: str | None = None, env: Mapping[str, str] | None = None, timeout: int | None = None) -> JsonObject:
+    """Build the request payload for one-shot process execution."""
+    payload: JsonObject = {"command": command}
     if cwd is not None:
-        payload["cwd"] = expand_env(cwd, env) if env else cwd
+        payload["cwd"] = cwd
+    if env is not None:
+        payload["envs"] = dict(env)
     if timeout is not None:
         payload["timeout"] = timeout
     return payload

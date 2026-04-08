@@ -10,6 +10,31 @@ from leap0.models.errors import Leap0Error
 
 
 class TestAsyncDesktopClient:
+    def test_selected_methods_forward_http_timeout(self, async_mock_transport):
+        async def run() -> None:
+            async_mock_transport.request_target_json.side_effect = [
+                {
+                    "display": ":0",
+                    "width": 1280,
+                    "height": 720,
+                },
+                {"ok": True},
+            ]
+            response = MagicMock()
+            response.content = b"video"
+            async_mock_transport.request_target.return_value = response
+
+            client = AsyncDesktopClient(async_mock_transport, sandbox_domain="sandbox.example.com")
+            await client.display_info("sbx-1", http_timeout=1.5)
+            await client.hotkey("sbx-1", keys=["Control_L", "c"], http_timeout=2.5)
+            await client.download_recording("sbx-1", "rec-1", http_timeout=3.5)
+
+            assert async_mock_transport.request_target_json.call_args_list[0].kwargs["timeout"] == 1.5
+            assert async_mock_transport.request_target_json.call_args_list[1].kwargs["timeout"] == 2.5
+            assert async_mock_transport.request_target.call_args.kwargs["timeout"] == 3.5
+
+        asyncio.run(run())
+
     def test_validates_request_payloads(self, async_mock_transport):
         async def run() -> None:
             client = AsyncDesktopClient(async_mock_transport, sandbox_domain="sandbox.example.com")

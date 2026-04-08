@@ -109,7 +109,7 @@ class AsyncDesktopClient:
         return f"{sandbox_base_url(sandbox_id_of(sandbox), self._sandbox_domain)}/"
 
     @intercept_errors("Failed to get display info: ")
-    async def display_info(self, sandbox: SandboxRef) -> DesktopDisplayInfo:
+    async def display_info(self, sandbox: SandboxRef, http_timeout: float | None = None) -> DesktopDisplayInfo:
         """Get display information for the desktop.
         
         Args:
@@ -118,11 +118,11 @@ class AsyncDesktopClient:
         Returns:
             object: Result returned by this operation.
         """
-        data = cast(DesktopDisplayInfoDict, await self._request_json("GET", sandbox, "/api/display"))
+        data = cast(DesktopDisplayInfoDict, await self._request_json("GET", sandbox, "/api/display", http_timeout=http_timeout))
         return DesktopDisplayInfo.from_dict(data)
 
     @intercept_errors("Failed to get screen info: ")
-    async def screen(self, sandbox: SandboxRef) -> DesktopDisplayInfo:
+    async def screen(self, sandbox: SandboxRef, http_timeout: float | None = None) -> DesktopDisplayInfo:
         """Get the current desktop screen geometry.
         
         Args:
@@ -131,7 +131,7 @@ class AsyncDesktopClient:
         Returns:
             object: Result returned by this operation.
         """
-        data = cast(DesktopDisplayInfoDict, await self._request_json("GET", sandbox, "/api/display/screen"))
+        data = cast(DesktopDisplayInfoDict, await self._request_json("GET", sandbox, "/api/display/screen", http_timeout=http_timeout))
         return DesktopDisplayInfo.from_dict(data)
 
     @intercept_errors("Failed to resize screen: ")
@@ -150,7 +150,7 @@ class AsyncDesktopClient:
         return DesktopDisplayInfo.from_dict(data)
 
     @intercept_errors("Failed to list windows: ")
-    async def windows(self, sandbox: SandboxRef) -> list[DesktopWindow]:
+    async def windows(self, sandbox: SandboxRef, http_timeout: float | None = None) -> list[DesktopWindow]:
         """List open desktop windows.
         
         Args:
@@ -159,7 +159,7 @@ class AsyncDesktopClient:
         Returns:
             object: Result returned by this operation.
         """
-        data = cast(DesktopWindowsDict, await self._request_json("GET", sandbox, "/api/display/windows"))
+        data = cast(DesktopWindowsDict, await self._request_json("GET", sandbox, "/api/display/windows", http_timeout=http_timeout))
         return [DesktopWindow.from_dict(item) for item in data.get("items", [])]
 
     @intercept_errors("Failed to take screenshot: ")
@@ -235,7 +235,7 @@ class AsyncDesktopClient:
         return response.content
 
     @intercept_errors("Failed to get pointer position: ")
-    async def pointer_position(self, sandbox: SandboxRef) -> DesktopPointerPosition:
+    async def pointer_position(self, sandbox: SandboxRef, http_timeout: float | None = None) -> DesktopPointerPosition:
         """Get the current pointer position.
         
         Args:
@@ -244,7 +244,7 @@ class AsyncDesktopClient:
         Returns:
             object: Result returned by this operation.
         """
-        data = cast(DesktopPointerPositionDict, await self._request_json("GET", sandbox, "/api/input/position"))
+        data = cast(DesktopPointerPositionDict, await self._request_json("GET", sandbox, "/api/input/position", http_timeout=http_timeout))
         return DesktopPointerPosition.from_dict(data)
 
     @intercept_errors("Failed to move pointer: ")
@@ -345,7 +345,7 @@ class AsyncDesktopClient:
         return DesktopOkResponse.model_validate(data).ok
 
     @intercept_errors("Failed to press hotkey: ")
-    async def hotkey(self, sandbox: SandboxRef, *, keys: list[str]) -> bool:
+    async def hotkey(self, sandbox: SandboxRef, *, keys: list[str], http_timeout: float | None = None) -> bool:
         """Send a multi-key hotkey combination.
         
         Args:
@@ -355,7 +355,7 @@ class AsyncDesktopClient:
         Returns:
             object: Result returned by this operation.
         """
-        data = await self._request_json("POST", sandbox, "/api/input/hotkey", json={"keys": keys})
+        data = await self._request_json("POST", sandbox, "/api/input/hotkey", json={"keys": keys}, http_timeout=http_timeout)
         return DesktopOkResponse.model_validate(data).ok
 
     @intercept_errors("Failed to get recording status: ")
@@ -373,7 +373,7 @@ class AsyncDesktopClient:
         return DesktopRecordingStatus.from_dict(data)
 
     @intercept_errors("Failed to start recording: ")
-    async def start_recording(self, sandbox: SandboxRef) -> DesktopRecordingStatus:
+    async def start_recording(self, sandbox: SandboxRef, http_timeout: float | None = None) -> DesktopRecordingStatus:
         """Start desktop recording.
         
         Args:
@@ -382,7 +382,7 @@ class AsyncDesktopClient:
         Returns:
             object: Result returned by this operation.
         """
-        data = cast(DesktopRecordingStatusDict, await self._request_json("POST", sandbox, "/api/recording/start", expected_status=201))
+        data = cast(DesktopRecordingStatusDict, await self._request_json("POST", sandbox, "/api/recording/start", expected_status=201, http_timeout=http_timeout))
         return DesktopRecordingStatus.from_dict(data)
 
     @intercept_errors("Failed to stop recording: ")
@@ -400,7 +400,7 @@ class AsyncDesktopClient:
         return DesktopRecordingStatus.from_dict(data)
 
     @intercept_errors("Failed to list recordings: ")
-    async def recordings(self, sandbox: SandboxRef) -> list[DesktopRecordingSummary]:
+    async def recordings(self, sandbox: SandboxRef, http_timeout: float | None = None) -> list[DesktopRecordingSummary]:
         """List saved desktop recordings.
         
         Args:
@@ -409,7 +409,7 @@ class AsyncDesktopClient:
         Returns:
             object: Result returned by this operation.
         """
-        raw = await self._request_json("GET", sandbox, "/api/recordings")
+        raw = await self._request_json("GET", sandbox, "/api/recordings", http_timeout=http_timeout)
         items = cast(list[DesktopRecordingSummaryDict], raw.get("items", []))
         return [DesktopRecordingSummary.from_dict(item) for item in items]
 
@@ -428,7 +428,7 @@ class AsyncDesktopClient:
         return DesktopRecordingSummary.from_dict(data)
 
     @intercept_errors("Failed to download recording: ")
-    async def download_recording(self, sandbox: SandboxRef, recording_id: str) -> bytes:
+    async def download_recording(self, sandbox: SandboxRef, recording_id: str, http_timeout: float | None = None) -> bytes:
         """Download a desktop recording as bytes.
         
         Args:
@@ -438,7 +438,7 @@ class AsyncDesktopClient:
         Returns:
             object: Result returned by this operation.
         """
-        response = await self._request("GET", sandbox, f"/api/recordings/{recording_id}/download")
+        response = await self._request("GET", sandbox, f"/api/recordings/{recording_id}/download", http_timeout=http_timeout)
         return response.content
 
     @intercept_errors("Failed to delete recording: ")
@@ -453,7 +453,7 @@ class AsyncDesktopClient:
         await self._request("DELETE", sandbox, f"/api/recordings/{recording_id}", expected_status=204, http_timeout=http_timeout)
 
     @intercept_errors("Failed to check desktop health: ")
-    async def health(self, sandbox: SandboxRef) -> DesktopHealth:
+    async def health(self, sandbox: SandboxRef, http_timeout: float | None = None) -> DesktopHealth:
         """Check service health.
         
         Args:
@@ -462,7 +462,7 @@ class AsyncDesktopClient:
         Returns:
             object: Result returned by this operation.
         """
-        data = cast(DesktopHealthDict, await self._request_json("GET", sandbox, "/api/healthz", expected_status=(200, 503)))
+        data = cast(DesktopHealthDict, await self._request_json("GET", sandbox, "/api/healthz", expected_status=(200, 503), http_timeout=http_timeout))
         return DesktopHealth.from_dict(data)
 
     @intercept_errors("Failed to get process status: ")
@@ -480,7 +480,7 @@ class AsyncDesktopClient:
         return DesktopProcessStatusList.from_dict(data)
 
     @intercept_errors("Failed to get process: ")
-    async def get_process(self, sandbox: SandboxRef, process_name: str) -> DesktopProcessStatus:
+    async def get_process(self, sandbox: SandboxRef, process_name: str, http_timeout: float | None = None) -> DesktopProcessStatus:
         """Get status for one desktop process.
         
         Args:
@@ -490,7 +490,7 @@ class AsyncDesktopClient:
         Returns:
             object: Result returned by this operation.
         """
-        data = cast(DesktopProcessStatusDict, await self._request_json("GET", sandbox, f"/api/process/{process_name}/status"))
+        data = cast(DesktopProcessStatusDict, await self._request_json("GET", sandbox, f"/api/process/{process_name}/status", http_timeout=http_timeout))
         return DesktopProcessStatus.from_dict(data)
 
     @intercept_errors("Failed to restart process: ")
@@ -508,7 +508,7 @@ class AsyncDesktopClient:
         return DesktopProcessRestart.from_dict(data)
 
     @intercept_errors("Failed to get process logs: ")
-    async def process_logs(self, sandbox: SandboxRef, process_name: str) -> DesktopProcessLogs:
+    async def process_logs(self, sandbox: SandboxRef, process_name: str, http_timeout: float | None = None) -> DesktopProcessLogs:
         """Get logs for one desktop process.
         
         Args:
@@ -518,7 +518,7 @@ class AsyncDesktopClient:
         Returns:
             object: Result returned by this operation.
         """
-        data = cast(DesktopProcessLogsDict, await self._request_json("GET", sandbox, f"/api/process/{process_name}/logs"))
+        data = cast(DesktopProcessLogsDict, await self._request_json("GET", sandbox, f"/api/process/{process_name}/logs", http_timeout=http_timeout))
         return DesktopProcessLogs.from_dict(data)
 
     @intercept_errors("Failed to get process errors: ")

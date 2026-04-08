@@ -77,7 +77,7 @@ class AsyncCodeInterpreterClient:
         )
 
     @intercept_errors("Failed to check interpreter health: ")
-    async def health(self, sandbox: SandboxRef) -> bool:
+    async def health(self, sandbox: SandboxRef, http_timeout: float | None = None) -> bool:
         """Check service health.
         
         Args:
@@ -86,7 +86,7 @@ class AsyncCodeInterpreterClient:
         Returns:
             object: Result returned by this operation.
         """
-        data = await self._request_json("GET", sandbox, "/healthz")
+        data = await self._request_json("GET", sandbox, "/healthz", http_timeout=http_timeout)
         return data.get("status") == "ok"
 
     @intercept_errors("Failed to create execution context: ")
@@ -109,7 +109,7 @@ class AsyncCodeInterpreterClient:
         return CodeContext.from_dict(data)
 
     @intercept_errors("Failed to list execution contexts: ")
-    async def list_contexts(self, sandbox: SandboxRef) -> list[CodeContext]:
+    async def list_contexts(self, sandbox: SandboxRef, http_timeout: float | None = None) -> list[CodeContext]:
         """List execution contexts.
         
         Args:
@@ -118,7 +118,7 @@ class AsyncCodeInterpreterClient:
         Returns:
             object: Result returned by this operation.
         """
-        raw = await self._request_json("GET", sandbox, "/contexts")
+        raw = await self._request_json("GET", sandbox, "/contexts", http_timeout=http_timeout)
         items = cast(list[CodeContextDict], raw.get("items", []))
         return [CodeContext.from_dict(item) for item in items]
 
@@ -138,14 +138,14 @@ class AsyncCodeInterpreterClient:
         return CodeContext.from_dict(data)
 
     @intercept_errors("Failed to delete execution context: ")
-    async def delete_context(self, sandbox: SandboxRef, context_id: str) -> None:
+    async def delete_context(self, sandbox: SandboxRef, context_id: str, http_timeout: float | None = None) -> None:
         """Delete an execution context.
         
         Args:
             sandbox: Sandbox ID or object.
             context_id: Parameter for this operation.
         """
-        await self._request("DELETE", sandbox, f"/contexts/{context_id}", expected_status=204)
+        await self._request("DELETE", sandbox, f"/contexts/{context_id}", expected_status=204, http_timeout=http_timeout)
 
     @intercept_errors("Failed to execute code: ")
     async def execute(

@@ -10,6 +10,7 @@ def parse_multipart_response(
     subject: str = "multipart body",
     operation: str | None = None,
 ) -> dict[str, bytes]:
+    """Parse a multipart payload into a map of named binary parts."""
     raw = f"Content-Type: {content_type}\r\n\r\n".encode() + body
     msg = BytesParser().parsebytes(raw)
     target = f"{operation} {subject}" if operation else subject

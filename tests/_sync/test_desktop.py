@@ -9,6 +9,28 @@ from leap0.models.errors import Leap0Error
 
 
 class TestDesktopClient:
+    def test_selected_methods_forward_http_timeout(self, mock_transport):
+        mock_transport.request_target_json.side_effect = [
+            {
+                "display": ":0",
+                "width": 1280,
+                "height": 720,
+            },
+            {"ok": True},
+        ]
+        response = MagicMock()
+        response.content = b"video"
+        mock_transport.request_target.return_value = response
+
+        client = DesktopClient(mock_transport, sandbox_domain="sandbox.example.com")
+        client.display_info("sbx-1", http_timeout=1.5)
+        client.type_text("sbx-1", text="hello", http_timeout=2.5)
+        client.download_recording("sbx-1", "rec-1", http_timeout=3.5)
+
+        assert mock_transport.request_target_json.call_args_list[0].kwargs["timeout"] == 1.5
+        assert mock_transport.request_target_json.call_args_list[1].kwargs["timeout"] == 2.5
+        assert mock_transport.request_target.call_args.kwargs["timeout"] == 3.5
+
     def test_validates_request_payloads(self, mock_transport):
         client = DesktopClient(mock_transport, sandbox_domain="sandbox.example.com")
 
