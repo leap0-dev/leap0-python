@@ -290,16 +290,19 @@ class AsyncSandboxesClient(Generic[AsyncSandboxT]):
         if page_size < 1 or page_size > 100:
             raise ValueError("page_size must be between 1 and 100")
 
+        params: dict[str, str | int] = {
+            "sort": sort,
+            "order-by": order_by,
+            "page": page,
+            "page-size": page_size,
+        }
+        if state is not None:
+            params["state"] = state
+
         data = cast(ListSandboxesResponseDict, await self._transport.request_json(
             "GET",
             "/v1/sandboxes",
-            params={
-                "state": state,
-                "sort": sort,
-                "order-by": order_by,
-                "page": page,
-                "page-size": page_size,
-            },
+            params=params,
             timeout=http_timeout,
         ))
         return SandboxListResponse.from_dict(data)

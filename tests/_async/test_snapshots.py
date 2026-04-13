@@ -6,6 +6,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from leap0._async.snapshots import AsyncSnapshotsClient
+from leap0.models.errors import Leap0Error
 from leap0.models.snapshot import Snapshot
 
 
@@ -58,7 +59,7 @@ class TestAsyncSnapshotsClient:
 
     def test_list_validates_page_size(self, async_mock_transport):
         async def run() -> None:
-            with pytest.raises(Exception, match="page_size"):
+            with pytest.raises(Leap0Error, match="page_size"):
                 await AsyncSnapshotsClient(async_mock_transport).list(page_size=101)
 
         asyncio.run(run())

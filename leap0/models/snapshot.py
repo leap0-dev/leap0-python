@@ -110,9 +110,18 @@ class SnapshotListResponse:
     @classmethod
     def from_dict(cls, data: ListSnapshotsResponseDict) -> SnapshotListResponse:
         """Build an instance from a wire-format dictionary."""
+        items = data.get("items")
+        if not isinstance(items, list):
+            raise ValueError("Snapshot list response missing required list 'items'")
+
+        total_items = data.get("total_items")
+        if total_items is None:
+            raise ValueError("Snapshot list response missing required 'total_items'")
+
+        parsed_total_items = int(total_items)
         return cls(
-            items=[Snapshot.from_dict(item) for item in data.get("items", [])],
-            total_items=int(data.get("total_items", 0)),
+            items=[Snapshot.from_dict(item) for item in items],
+            total_items=parsed_total_items,
         )
 
 class SnapshotIdentifiable(Protocol):
