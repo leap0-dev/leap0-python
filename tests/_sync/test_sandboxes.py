@@ -59,6 +59,18 @@ class TestSandboxesClient:
         with pytest.raises(Leap0Error, match="page_size"):
             SandboxesClient(mock_transport, sandbox_domain="s.dev").list(page_size=101)
 
+    def test_list_omits_state_when_not_provided(self, mock_transport):
+        mock_transport.request_json.return_value = {"items": [], "total_items": 0}
+
+        SandboxesClient(mock_transport, sandbox_domain="s.dev").list()
+
+        assert mock_transport.request_json.call_args[1]["params"] == {
+            "sort": "created_at",
+            "order-by": "desc",
+            "page": 1,
+            "page-size": 20,
+        }
+
     def test_delete(self, mock_transport):
         mock_transport.request.return_value = MagicMock(status_code=204)
         SandboxesClient(mock_transport, sandbox_domain="s.dev").delete("sbx-1")
