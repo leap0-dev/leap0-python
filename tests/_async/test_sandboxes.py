@@ -40,6 +40,40 @@ class TestAsyncSandboxesClient:
 
         asyncio.run(run())
 
+    def test_list(self, async_mock_transport):
+        async def run() -> None:
+            async_mock_transport.request_json.return_value = {
+                "items": [{
+                    "id": "sbx-1", "template_id": "tpl-1", "pod_id": "pod-1", "state": "running",
+                    "created_at": "2026-01-01T00:00:00Z",
+                }],
+                "total_items": 1,
+            }
+
+            result = await AsyncSandboxesClient(async_mock_transport, sandbox_domain="s.dev").list(
+                state="running", sort="state", order_by="asc", page=2, page_size=10,
+            )
+
+            args, kwargs = async_mock_transport.request_json.call_args
+            assert args == ("GET", "/v1/sandboxes")
+            assert kwargs["params"] == {
+                "state": "running",
+                "sort": "state",
+                "order-by": "asc",
+                "page": 2,
+                "page-size": 10,
+            }
+            assert result.total_items == 1
+
+        asyncio.run(run())
+
+    def test_list_validates_input(self, async_mock_transport):
+        async def run() -> None:
+            with pytest.raises(Leap0Error, match="state must be one of"):
+                await AsyncSandboxesClient(async_mock_transport, sandbox_domain="s.dev").list(state="deleted")
+
+        asyncio.run(run())
+
     def test_create_injects_otel_env_when_enabled(self, async_mock_transport, monkeypatch):
         async def run() -> None:
             monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://collector:4318")
@@ -89,6 +123,29 @@ class TestAsyncSandboxesClient:
 
         asyncio.run(run())
 
+    def test_get_user_home_dir(self, async_mock_transport):
+        async def run() -> None:
+            async_mock_transport.request_json.return_value = {"user_home_dir": "/home/steven"}
+
+            result = await AsyncSandboxesClient(async_mock_transport, sandbox_domain="s.dev").get_user_home_dir("sbx-1")
+
+            assert result == "/home/steven"
+            assert async_mock_transport.request_json.call_args[0][1] == "/v1/sandbox/sbx-1/system/user-home-dir"
+
+        asyncio.run(run())
+
+    def test_get_workdir(self, async_mock_transport):
+        async def run() -> None:
+            async_mock_transport.request_json.return_value = {"workdir": "/home/steve/agent"}
+
+            result = await AsyncSandboxesClient(async_mock_transport, sandbox_domain="s.dev").get_workdir("sbx-1")
+
+            assert result == "/home/steve/agent"
+            assert async_mock_transport.request_json.call_args[0][1] == "/v1/sandbox/sbx-1/system/workdir"
+
+        asyncio.run(run())
+
+
 
 class TestAsyncSandbox:
     def test_pause_forwards_http_timeout(self):
@@ -110,5 +167,31 @@ class TestAsyncSandbox:
             await sandbox.pause(http_timeout=2.5)
 
             assert sandbox.state == "paused"
+
+        asyncio.run(run())
+
+    def test_runtime_info_helpers_delegate_to_sandboxes_client(self):
+        async def run() -> None:
+            sandboxes = SimpleNamespace()
+            fake_client = SimpleNamespace(
+                _filesystem=SimpleNamespace(), _git=SimpleNamespace(), _process=SimpleNamespace(), _pty=SimpleNamespace(),
+                _lsp=SimpleNamespace(), _ssh=SimpleNamespace(), _code_interpreter=SimpleNamespace(), _desktop=SimpleNamespace(),
+                sandboxes=sandboxes,
+            )
+
+            async def get_user_home_dir(sandbox: object, http_timeout: float | None = None):
+                assert http_timeout == 1.5
+                return "/home/steven"
+
+            async def get_workdir(sandbox: object, http_timeout: float | None = None):
+                assert http_timeout == 2.5
+                return "/home/steve/agent"
+
+            sandboxes.get_user_home_dir = get_user_home_dir
+            sandboxes.get_workdir = get_workdir
+            sandbox = AsyncSandbox(fake_client, Sandbox(id="sbx-1", state="running"))
+
+            assert await sandbox.get_user_home_dir(http_timeout=1.5) == "/home/steven"
+            assert await sandbox.get_workdir(http_timeout=2.5) == "/home/steve/agent"
 
         asyncio.run(run())

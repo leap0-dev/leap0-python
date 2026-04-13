@@ -38,6 +38,9 @@ from leap0 import (
     RenameTemplateParams,
     ResumeSnapshotParams,
     Sandbox,
+    SandboxListItem,
+    SandboxListResponse,
+    SnapshotListResponse,
     SandboxesClient,
     SnapshotsClient,
     StreamEventType,
@@ -57,6 +60,9 @@ def test_service_client_imports() -> None:
     assert ProcessClient is not None
     assert PtyClient is not None
     assert Sandbox is not None
+    assert SandboxListItem is not None
+    assert SandboxListResponse is not None
+    assert SnapshotListResponse is not None
     assert SandboxesClient is not None
     assert SnapshotsClient is not None
     assert TemplatesClient is not None

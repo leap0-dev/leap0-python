@@ -77,11 +77,13 @@ if TYPE_CHECKING:
     from .models.sandbox import (
         CreateSandboxParams,
         NetworkPolicyMode,
+        SandboxListItem,
+        SandboxListResponse,
         SandboxState,
         SandboxStatus,
         sandbox_id_of,
     )
-    from .models.snapshot import CreateSnapshotParams, ResumeSnapshotParams, Snapshot, snapshot_id_of
+    from .models.snapshot import CreateSnapshotParams, ResumeSnapshotParams, Snapshot, SnapshotListResponse, snapshot_id_of
     from .models.ssh import SshAccess, SshValidation
     from .models.template import (
         AwsRegistryCredentials,
@@ -199,11 +201,14 @@ __all__ = [
     "RegistryCredentialsInput",
     "ResumeSnapshotParams",
     "Sandbox",
+    "SandboxListItem",
+    "SandboxListResponse",
     "SandboxState",
     "SandboxStatus",
     "SandboxesClient",
     "SearchMatch",
     "Snapshot",
+    "SnapshotListResponse",
     "snapshot_id_of",
     "SnapshotsClient",
     "SshAccess",
@@ -262,12 +267,15 @@ _DYNAMIC_IMPORTS: dict[str, tuple[str, str]] = {
     "Leap0WebSocketError": (".models.errors", "Leap0WebSocketError"),
     "CreateSandboxParams": (".models.sandbox", "CreateSandboxParams"),
     "NetworkPolicyMode": (".models.sandbox", "NetworkPolicyMode"),
+    "SandboxListItem": (".models.sandbox", "SandboxListItem"),
+    "SandboxListResponse": (".models.sandbox", "SandboxListResponse"),
     "SandboxStatus": (".models.sandbox", "SandboxStatus"),
     "SandboxState": (".models.sandbox", "SandboxState"),
     "sandbox_id_of": (".models.sandbox", "sandbox_id_of"),
     "CreateSnapshotParams": (".models.snapshot", "CreateSnapshotParams"),
     "ResumeSnapshotParams": (".models.snapshot", "ResumeSnapshotParams"),
     "Snapshot": (".models.snapshot", "Snapshot"),
+    "SnapshotListResponse": (".models.snapshot", "SnapshotListResponse"),
     "snapshot_id_of": (".models.snapshot", "snapshot_id_of"),
     "EditFileResult": (".models.filesystem", "EditFileResult"),
     "EditResult": (".models.filesystem", "EditResult"),

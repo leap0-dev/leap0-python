@@ -5,7 +5,7 @@ from typing import Protocol
 
 from pydantic import BaseModel, ConfigDict, model_validator
 
-from .._schemas.snapshot import SnapshotCreateResponseDict
+from .._schemas.snapshot import ListSnapshotsResponseDict, SnapshotCreateResponseDict
 from .sandbox import NetworkPolicyDict, NetworkPolicyMode, SandboxState, _parse_sandbox_state
 
 class CreateSnapshotParams(BaseModel):
@@ -99,6 +99,20 @@ class Snapshot:
             state=_parse_sandbox_state(state) if state is not None else None,
             network_policy=data.get("network_policy"),
             created_at=data.get("created_at", ""),
+        )
+
+@dataclass(slots=True)
+class SnapshotListResponse:
+    """Paginated snapshot list response."""
+    items: list[Snapshot]
+    total_items: int
+
+    @classmethod
+    def from_dict(cls, data: ListSnapshotsResponseDict) -> SnapshotListResponse:
+        """Build an instance from a wire-format dictionary."""
+        return cls(
+            items=[Snapshot.from_dict(item) for item in data.get("items", [])],
+            total_items=int(data.get("total_items", 0)),
         )
 
 class SnapshotIdentifiable(Protocol):

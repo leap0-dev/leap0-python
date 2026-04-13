@@ -29,10 +29,57 @@ class TestSandboxesClient:
         SandboxesClient(mock_transport, sandbox_domain="s.dev").get("sbx-1")
         assert mock_transport.request_json.call_args[0][1] == "/v1/sandbox/sbx-1/"
 
+    def test_list(self, mock_transport):
+        mock_transport.request_json.return_value = {
+            "items": [{
+                "id": "sbx-1", "template_id": "tpl-1", "pod_id": "pod-1", "state": "running",
+                "launch_time": "2026-01-01T00:00:05Z", "state_change_time": "2026-01-01T00:00:10Z",
+                "timeout_at": 1735689900, "created_at": "2026-01-01T00:00:00Z",
+            }],
+            "total_items": 1,
+        }
+
+        result = SandboxesClient(mock_transport, sandbox_domain="s.dev").list(
+            state="running", sort="state", order_by="asc", page=2, page_size=10,
+        )
+
+        args, kwargs = mock_transport.request_json.call_args
+        assert args == ("GET", "/v1/sandboxes")
+        assert kwargs["params"] == {
+            "state": "running",
+            "sort": "state",
+            "order-by": "asc",
+            "page": 2,
+            "page-size": 10,
+        }
+        assert result.total_items == 1
+        assert result.items[0].pod_id == "pod-1"
+
+    def test_list_validates_input(self, mock_transport):
+        with pytest.raises(Leap0Error, match="page_size"):
+            SandboxesClient(mock_transport, sandbox_domain="s.dev").list(page_size=101)
+
     def test_delete(self, mock_transport):
         mock_transport.request.return_value = MagicMock(status_code=204)
         SandboxesClient(mock_transport, sandbox_domain="s.dev").delete("sbx-1")
         assert mock_transport.request.call_args[1]["expected_status"] == 204
+
+    def test_get_user_home_dir(self, mock_transport):
+        mock_transport.request_json.return_value = {"user_home_dir": "/home/steven"}
+
+        result = SandboxesClient(mock_transport, sandbox_domain="s.dev").get_user_home_dir("sbx-1")
+
+        assert result == "/home/steven"
+        assert mock_transport.request_json.call_args[0][1] == "/v1/sandbox/sbx-1/system/user-home-dir"
+
+    def test_get_workdir(self, mock_transport):
+        mock_transport.request_json.return_value = {"workdir": "/home/steve/agent"}
+
+        result = SandboxesClient(mock_transport, sandbox_domain="s.dev").get_workdir("sbx-1")
+
+        assert result == "/home/steve/agent"
+        assert mock_transport.request_json.call_args[0][1] == "/v1/sandbox/sbx-1/system/workdir"
+
 
     def test_accepts_sandbox_object(self, mock_transport):
         mock_transport.request_json.return_value = {
@@ -199,3 +246,26 @@ class TestRichSandbox:
 
         sandboxes.pause.assert_called_once_with(sandbox, http_timeout=7.5)
         assert sandbox.state == "paused"
+
+    def test_runtime_info_helpers_delegate_to_sandboxes_client(self):
+        sandboxes = MagicMock()
+        sandboxes.get_user_home_dir.return_value = "/home/steven"
+        sandboxes.get_workdir.return_value = "/home/steve/agent"
+        client = SimpleNamespace(
+            _filesystem=MagicMock(),
+            _git=MagicMock(),
+            _process=MagicMock(),
+            _pty=MagicMock(),
+            _lsp=MagicMock(),
+            _ssh=MagicMock(),
+            _code_interpreter=MagicMock(),
+            _desktop=MagicMock(),
+            sandboxes=sandboxes,
+        )
+
+        sandbox = RichSandbox(client, Sandbox(id="sbx-1", state="running"))
+
+        assert sandbox.get_user_home_dir(http_timeout=1.5) == "/home/steven"
+        assert sandbox.get_workdir(http_timeout=2.5) == "/home/steve/agent"
+        sandboxes.get_user_home_dir.assert_called_once_with(sandbox, http_timeout=1.5)
+        sandboxes.get_workdir.assert_called_once_with(sandbox, http_timeout=2.5)
