@@ -74,6 +74,21 @@ class TestAsyncSandboxesClient:
 
         asyncio.run(run())
 
+    def test_list_omits_state_when_not_provided(self, async_mock_transport):
+        async def run() -> None:
+            async_mock_transport.request_json.return_value = {"items": [], "total_items": 0}
+
+            await AsyncSandboxesClient(async_mock_transport, sandbox_domain="s.dev").list()
+
+            assert async_mock_transport.request_json.call_args[1]["params"] == {
+                "sort": "created_at",
+                "order-by": "desc",
+                "page": 1,
+                "page-size": 20,
+            }
+
+        asyncio.run(run())
+
     def test_create_injects_otel_env_when_enabled(self, async_mock_transport, monkeypatch):
         async def run() -> None:
             monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://collector:4318")
