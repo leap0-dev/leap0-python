@@ -17,3 +17,8 @@ class SnapshotCreateResponseDict(TypedDict, total=False):
     state: SandboxState | str
     created_at: str
     network_policy: NetworkPolicyDict | None
+
+class ListSnapshotsResponseDict(TypedDict):
+    """Wire schema for paginated snapshot list responses."""
+    items: list[SnapshotCreateResponseDict]
+    total_items: int

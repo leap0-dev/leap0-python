@@ -11,7 +11,14 @@ from pydantic import BaseModel, ConfigDict, model_validator
 
 from .._internal.types import SandboxHandle
 from .._internal.types import JsonObject
-from .._schemas.sandbox import NetworkPolicyDict, SandboxCreateResponseDict, SandboxStatusResponseDict, TransformRuleDict
+from .._schemas.sandbox import (
+    ListSandboxesResponseDict,
+    NetworkPolicyDict,
+    SandboxCreateResponseDict,
+    SandboxListItemResponseDict,
+    SandboxStatusResponseDict,
+    TransformRuleDict,
+)
 from .config import DEFAULT_MEMORY_MIB, DEFAULT_TEMPLATE_NAME, DEFAULT_TIMEOUT_MIN, DEFAULT_VCPU
 
 class SandboxState(str, Enum):
@@ -194,6 +201,53 @@ class SandboxStatus(SandboxHandle):
             state=state,
             auto_pause=bool(data.get("auto_pause", False)),
             created_at=data.get("created_at", ""),
+        )
+
+@dataclass(slots=True)
+class SandboxListItem:
+    """Summary entry returned by the sandbox list API."""
+    id: str
+    template_id: str
+    pod_id: str
+    state: SandboxState | str
+    launch_time: str | None = None
+    state_change_time: str | None = None
+    timeout_at: int | None = None
+    created_at: str = ""
+
+    @classmethod
+    def from_dict(cls, data: SandboxListItemResponseDict) -> SandboxListItem:
+        """Build an instance from a wire-format dictionary."""
+        sandbox_id = data.get("id")
+        if not isinstance(sandbox_id, str) or not sandbox_id.strip():
+            raise ValueError(f"SandboxListItem response missing required non-empty string 'id', got: {sandbox_id!r}")
+        state = _parse_sandbox_state(data.get("state"))
+        launch_time = data.get("launch_time")
+        state_change_time = data.get("state_change_time")
+        timeout_at = data.get("timeout_at")
+        return cls(
+            id=sandbox_id,
+            template_id=data.get("template_id", ""),
+            pod_id=data.get("pod_id", ""),
+            state=state,
+            launch_time=launch_time if isinstance(launch_time, str) else None,
+            state_change_time=state_change_time if isinstance(state_change_time, str) else None,
+            timeout_at=int(timeout_at) if timeout_at is not None else None,
+            created_at=data.get("created_at", ""),
+        )
+
+@dataclass(slots=True)
+class SandboxListResponse:
+    """Paginated sandbox list response."""
+    items: list[SandboxListItem]
+    total_items: int
+
+    @classmethod
+    def from_dict(cls, data: ListSandboxesResponseDict) -> SandboxListResponse:
+        """Build an instance from a wire-format dictionary."""
+        return cls(
+            items=[SandboxListItem.from_dict(item) for item in data.get("items", [])],
+            total_items=int(data.get("total_items", 0)),
         )
 
 SandboxRef: TypeAlias = str | SandboxHandle

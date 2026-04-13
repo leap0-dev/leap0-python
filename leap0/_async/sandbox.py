@@ -13,8 +13,15 @@ from ..models.config import (
     DEFAULT_TIMEOUT_MIN,
     DEFAULT_VCPU,
 )
-from ..models.sandbox import CreateSandboxParams, Sandbox as SandboxData, SandboxRef, SandboxStatus, sandbox_id_of
-from .._schemas.sandbox import NetworkPolicyDict, SandboxCreateResponseDict, SandboxStatusResponseDict
+from ..models.sandbox import (
+    CreateSandboxParams,
+    Sandbox as SandboxData,
+    SandboxListResponse,
+    SandboxRef,
+    SandboxStatus,
+    sandbox_id_of,
+)
+from .._schemas.sandbox import ListSandboxesResponseDict, NetworkPolicyDict, SandboxCreateResponseDict, SandboxStatusResponseDict
 from .._utils.errors import intercept_errors
 from .._utils.url import ensure_leading_slash, sandbox_base_url, websocket_url_from_http
 from ._transport import AsyncTransport
@@ -147,6 +154,14 @@ class AsyncSandbox(SandboxHandle):
         """
         return self._client.sandboxes.websocket_url(self, path=path, port=port)
 
+    async def get_user_home_dir(self, http_timeout: float | None = None) -> str:
+        """Fetch the resolved home directory for the sandbox user."""
+        return await self._client.sandboxes.get_user_home_dir(self, http_timeout=http_timeout)
+
+    async def get_workdir(self, http_timeout: float | None = None) -> str:
+        """Fetch the configured working directory for the sandbox."""
+        return await self._client.sandboxes.get_workdir(self, http_timeout=http_timeout)
+
 
 def _inject_otel_env(env_vars: dict[str, str] | None) -> dict[str, str] | None:
     endpoint = os.environ.get(OTEL_EXPORTER_OTLP_ENDPOINT_ENV)
@@ -239,6 +254,56 @@ class AsyncSandboxesClient(Generic[AsyncSandboxT]):
         )
         return self._wrap_sandbox(SandboxData.from_dict(data))
 
+    @intercept_errors("Failed to list sandboxes: ")
+    async def list(
+        self,
+        *,
+        state: str | None = None,
+        sort: str = "created_at",
+        order_by: str = "desc",
+        page: int = 1,
+        page_size: int = 20,
+        http_timeout: float | None = None,
+    ) -> SandboxListResponse:
+        """List sandboxes for the authenticated organization.
+
+        Args:
+            state: Optional sandbox state filter.
+            sort: Sort field, either ``created_at`` or ``state``.
+            order_by: Sort direction, either ``asc`` or ``desc``.
+            page: 1-based page number.
+            page_size: Page size between 1 and 100.
+            http_timeout: Optional HTTP request timeout in seconds for this SDK call.
+
+        Returns:
+            SandboxListResponse: Paginated sandbox summaries.
+        """
+        valid_states = {"starting", "snapshotting", "running", "paused", "unpausing", "deleting"}
+        if state is not None and state not in valid_states:
+            raise ValueError(f"state must be one of {sorted(valid_states)}")
+        if sort not in {"created_at", "state"}:
+            raise ValueError("sort must be one of ['created_at', 'state']")
+        if order_by not in {"asc", "desc"}:
+            raise ValueError("order_by must be one of ['asc', 'desc']")
+        if page < 1:
+            raise ValueError("page must be at least 1")
+        if page_size < 1 or page_size > 100:
+            raise ValueError("page_size must be between 1 and 100")
+
+        data = cast(ListSandboxesResponseDict, await self._transport.request_json(
+            "GET",
+            "/v1/sandboxes",
+            params={
+                "state": state,
+                "sort": sort,
+                "order-by": order_by,
+                "page": page,
+                "page-size": page_size,
+            },
+            timeout=http_timeout,
+        ))
+        return SandboxListResponse.from_dict(data)
+
     @intercept_errors("Failed to pause sandbox: ")
     async def pause(
         self,
@@ -292,6 +357,47 @@ class AsyncSandboxesClient(Generic[AsyncSandboxT]):
             expected_status=204,
             timeout=http_timeout,
         )
+
+    @intercept_errors("Failed to get sandbox user home directory: ")
+    async def get_user_home_dir(self, sandbox: SandboxRef, http_timeout: float | None = None) -> str:
+        """Get the resolved home directory for the sandbox user.
+
+        Args:
+            sandbox: Sandbox ID or object.
+            http_timeout: Optional HTTP request timeout in seconds for this SDK call.
+
+        Returns:
+            str: Resolved sandbox user home directory.
+        """
+        data = cast(dict[str, object], await self._transport.request_json(
+            "GET", f"/v1/sandbox/{sandbox_id_of(sandbox)}/system/user-home-dir",
+            timeout=http_timeout,
+        ))
+        value = data.get("user_home_dir")
+        if not isinstance(value, str):
+            raise ValueError("Sandbox user home directory response missing 'user_home_dir'")
+        return value
+
+    @intercept_errors("Failed to get sandbox workdir: ")
+    async def get_workdir(self, sandbox: SandboxRef, http_timeout: float | None = None) -> str:
+        """Get the configured working directory for the sandbox.
+
+        Args:
+            sandbox: Sandbox ID or object.
+            http_timeout: Optional HTTP request timeout in seconds for this SDK call.
+
+        Returns:
+            str: Configured sandbox workdir.
+        """
+        data = cast(dict[str, object], await self._transport.request_json(
+            "GET", f"/v1/sandbox/{sandbox_id_of(sandbox)}/system/workdir",
+            timeout=http_timeout,
+        ))
+        value = data.get("workdir")
+        if not isinstance(value, str):
+            raise ValueError("Sandbox workdir response missing 'workdir'")
+        return value
+
 
     def invoke_url(self, sandbox: SandboxRef, path: str = "/", *, port: int | None = None) -> str:
         """Build an HTTPS URL for this sandbox.

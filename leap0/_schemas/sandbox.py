@@ -41,3 +41,19 @@ class SandboxStatusResponseDict(TypedDict):
     state: SandboxState | str
     auto_pause: bool
     created_at: str
+
+class SandboxListItemResponseDict(TypedDict, total=False):
+    """Wire schema for sandbox list items."""
+    id: Required[str]
+    template_id: Required[str]
+    pod_id: Required[str]
+    state: Required[SandboxState | str]
+    launch_time: str
+    state_change_time: str
+    timeout_at: int
+    created_at: Required[str]
+
+class ListSandboxesResponseDict(TypedDict):
+    """Wire schema for paginated sandbox list responses."""
+    items: list[SandboxListItemResponseDict]
+    total_items: int
