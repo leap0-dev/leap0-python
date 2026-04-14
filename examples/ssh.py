@@ -17,10 +17,12 @@ def main() -> None:
         print("ssh command:", access.ssh_command)
 
         validation: SshValidation = sandbox.ssh.validate_access(
-            access_id=access.id,
+            id=access.id,
             password=access.password,
         )
         print("ssh valid:", validation.valid)
+        rotated: SshAccess = sandbox.ssh.regenerate_access(id=access.id)
+        print("rotated ssh command:", rotated.ssh_command)
     finally:
         sandbox.delete()
         client.close()

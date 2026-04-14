@@ -20,7 +20,7 @@ class TestAsyncSshClient:
     def test_delete_access(self, async_mock_transport):
         async def run() -> None:
             async_mock_transport.request.return_value = MagicMock(status_code=204)
-            await AsyncSshClient(async_mock_transport).delete_access("sbx-1")
-            assert async_mock_transport.request.call_args[0][:2] == ("DELETE", "/v1/sandbox/sbx-1/ssh/access")
+            await AsyncSshClient(async_mock_transport).delete_access("sbx-1", id="ssh-1")
+            assert async_mock_transport.request.call_args[0][:2] == ("DELETE", "/v1/sandbox/sbx-1/ssh/ssh-1")
 
         asyncio.run(run())
