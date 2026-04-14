@@ -24,8 +24,9 @@ class SandboxCreateResponseDict(TypedDict):
     id: str
     template_id: str
     vcpu: int
-    memory_mib: int
-    disk_mib: int
+    memory: int
+    disk: int
+    timeout: int
     state: SandboxState | str
     auto_pause: bool
     created_at: str
@@ -36,8 +37,9 @@ class SandboxStatusResponseDict(TypedDict):
     id: str
     template_id: str
     vcpu: int
-    memory_mib: int
-    disk_mib: int
+    memory: int
+    disk: int
+    timeout: int
     state: SandboxState | str
     auto_pause: bool
     created_at: str

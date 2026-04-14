@@ -19,7 +19,7 @@ class TestSnapshot:
 
     def test_from_dict_full(self):
         s = Snapshot.from_dict({"id": "snap-1", "name": "my-snap", "template_id": "tpl-1",
-                                "vcpu": 2, "memory_mib": 1024, "disk_mib": 10240,
+                                "vcpu": 2, "memory": 1024, "disk": 10240,
                                 "network_policy": {"mode": "deny-all"}, "created_at": "2025-01-01"})
         assert s.id == "snap-1"
         assert s.state is None

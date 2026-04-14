@@ -9,7 +9,7 @@ from .._internal.types import SandboxFactory, SandboxHandle
 from ..models.config import (
     DEFAULT_MEMORY_MIB,
     DEFAULT_TEMPLATE_NAME,
-    DEFAULT_TIMEOUT_MIN,
+    DEFAULT_TIMEOUT,
     DEFAULT_VCPU,
 )
 from ..models.sandbox import (
@@ -232,8 +232,8 @@ class SandboxesClient(Generic[SandboxT]):
         *,
         template_name: str = DEFAULT_TEMPLATE_NAME,
         vcpu: int = DEFAULT_VCPU,
-        memory_mib: int = DEFAULT_MEMORY_MIB,
-        timeout_min: int = DEFAULT_TIMEOUT_MIN,
+        memory: int = DEFAULT_MEMORY_MIB,
+        timeout: int = DEFAULT_TIMEOUT,
         auto_pause: bool = False,
         otel_export: bool | None = None,
         telemetry: bool | None = None,
@@ -246,8 +246,8 @@ class SandboxesClient(Generic[SandboxT]):
         Args:
             template_name: Name of the template to use.
             vcpu: Number of virtual CPUs (1 to 8).
-            memory_mib: Memory in MiB (512 to 8192, must be even).
-            timeout_min: Sandbox timeout in minutes (1 to 480, default 5).
+            memory: Memory in MiB (512 to 8192, must be even).
+            timeout: Sandbox timeout in seconds (1 to 28800, default 300).
             auto_pause: Automatically pause the sandbox into a snapshot on timeout.
             otel_export: Inject OpenTelemetry exporter environment into the sandbox.
                 Requires ``OTEL_EXPORTER_OTLP_ENDPOINT`` in the local environment and
@@ -265,8 +265,8 @@ class SandboxesClient(Generic[SandboxT]):
         params = CreateSandboxParams(
             template_name=template_name,
             vcpu=vcpu,
-            memory_mib=memory_mib,
-            timeout_min=timeout_min,
+            memory=memory,
+            timeout=timeout,
             auto_pause=auto_pause,
             otel_export=effective_otel_export,
             env_vars=_inject_otel_env(env_vars) if effective_otel_export else env_vars,

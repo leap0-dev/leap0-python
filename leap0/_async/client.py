@@ -28,7 +28,7 @@ from ..models.config import (
     DEFAULT_MEMORY_MIB,
     DEFAULT_SANDBOX_DOMAIN,
     DEFAULT_TEMPLATE_NAME,
-    DEFAULT_TIMEOUT_MIN,
+    DEFAULT_TIMEOUT,
     DEFAULT_VCPU,
     Leap0Config,
 )
@@ -86,7 +86,7 @@ class AsyncLeap0Client:
     DEFAULT_DESKTOP_TEMPLATE_NAME = DEFAULT_DESKTOP_TEMPLATE_NAME
     DEFAULT_VCPU = DEFAULT_VCPU
     DEFAULT_MEMORY_MIB = DEFAULT_MEMORY_MIB
-    DEFAULT_TIMEOUT_MIN = DEFAULT_TIMEOUT_MIN
+    DEFAULT_TIMEOUT = DEFAULT_TIMEOUT
 
     _tracer_provider: TracerProvider | None = None
     _meter_provider: MeterProvider | None = None

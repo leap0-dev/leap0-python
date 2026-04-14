@@ -12,10 +12,10 @@ from leap0.models.sandbox import CreateSandboxParams, Sandbox
 class TestSandboxesClient:
     def test_create(self, mock_transport):
         mock_transport.request_json.return_value = {
-            "id": "sbx-1", "template_id": "tpl-1", "vcpu": 2, "memory_mib": 2048,
-            "disk_mib": 10240, "state": "starting", "auto_pause": False, "created_at": "",
+            "id": "sbx-1", "template_id": "tpl-1", "vcpu": 2, "memory": 2048,
+            "disk": 10240, "timeout": 300, "state": "starting", "auto_pause": False, "created_at": "",
         }
-        result = SandboxesClient(mock_transport, sandbox_domain="s.dev").create(template_name="my-tpl", vcpu=2, memory_mib=2048)
+        result = SandboxesClient(mock_transport, sandbox_domain="s.dev").create(template_name="my-tpl", vcpu=2, memory=2048)
         args, kwargs = mock_transport.request_json.call_args
         assert args == ("POST", "/v1/sandbox")
         assert kwargs["json"]["template_name"] == "my-tpl"
@@ -23,8 +23,8 @@ class TestSandboxesClient:
 
     def test_get(self, mock_transport):
         mock_transport.request_json.return_value = {
-            "id": "sbx-1", "template_id": "t", "vcpu": 1, "memory_mib": 512,
-            "disk_mib": 10240, "state": "running", "auto_pause": False, "created_at": "",
+            "id": "sbx-1", "template_id": "t", "vcpu": 1, "memory": 512,
+            "disk": 10240, "timeout": 300, "state": "running", "auto_pause": False, "created_at": "",
         }
         SandboxesClient(mock_transport, sandbox_domain="s.dev").get("sbx-1")
         assert mock_transport.request_json.call_args[0][1] == "/v1/sandbox/sbx-1/"
@@ -126,8 +126,8 @@ class TestSandboxesClient:
 
     def test_accepts_sandbox_object(self, mock_transport):
         mock_transport.request_json.return_value = {
-            "id": "sbx-1", "template_id": "t", "vcpu": 1, "memory_mib": 512,
-            "disk_mib": 10240, "state": "running", "auto_pause": False, "created_at": "",
+            "id": "sbx-1", "template_id": "t", "vcpu": 1, "memory": 512,
+            "disk": 10240, "timeout": 300, "state": "running", "auto_pause": False, "created_at": "",
         }
         SandboxesClient(mock_transport, sandbox_domain="s.dev").get(Sandbox(id="sbx-obj"))
         assert "sbx-obj" in mock_transport.request_json.call_args[0][1]
@@ -153,8 +153,8 @@ class TestSandboxesClient:
         )
         fake_client.sandboxes = client
         mock_transport.request_json.return_value = {
-            "id": "sbx-1", "template_id": "tpl-1", "vcpu": 2, "memory_mib": 2048,
-            "disk_mib": 10240, "state": "starting", "auto_pause": False, "created_at": "",
+            "id": "sbx-1", "template_id": "tpl-1", "vcpu": 2, "memory": 2048,
+            "disk": 10240, "timeout": 300, "state": "starting", "auto_pause": False, "created_at": "",
         }
 
         result = client.create(template_name="my-tpl")
@@ -163,15 +163,15 @@ class TestSandboxesClient:
         assert result.id == "sbx-1"
 
     def test_create_validates_input(self, mock_transport):
-        with pytest.raises(Leap0Error, match="memory_mib"):
-            SandboxesClient(mock_transport, sandbox_domain="s.dev").create(memory_mib=513)
+        with pytest.raises(Leap0Error, match="memory"):
+            SandboxesClient(mock_transport, sandbox_domain="s.dev").create(memory=513)
 
     def test_create_injects_otel_env_when_enabled(self, mock_transport, monkeypatch):
         monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://collector:4318")
         monkeypatch.setenv("OTEL_EXPORTER_OTLP_HEADERS", "authorization=token")
         mock_transport.request_json.return_value = {
-            "id": "sbx-1", "template_id": "tpl-1", "vcpu": 2, "memory_mib": 2048,
-            "disk_mib": 10240, "state": "starting", "auto_pause": False, "created_at": "",
+            "id": "sbx-1", "template_id": "tpl-1", "vcpu": 2, "memory": 2048,
+            "disk": 10240, "timeout": 300, "state": "starting", "auto_pause": False, "created_at": "",
         }
 
         SandboxesClient(mock_transport, sandbox_domain="s.dev").create(
@@ -189,8 +189,8 @@ class TestSandboxesClient:
     def test_create_accepts_legacy_telemetry_flag(self, mock_transport, monkeypatch):
         monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://collector:4318")
         mock_transport.request_json.return_value = {
-            "id": "sbx-1", "template_id": "tpl-1", "vcpu": 2, "memory_mib": 2048,
-            "disk_mib": 10240, "state": "starting", "auto_pause": False, "created_at": "",
+            "id": "sbx-1", "template_id": "tpl-1", "vcpu": 2, "memory": 2048,
+            "disk": 10240, "timeout": 300, "state": "starting", "auto_pause": False, "created_at": "",
         }
 
         SandboxesClient(mock_transport, sandbox_domain="s.dev").create(telemetry=True)
@@ -200,8 +200,8 @@ class TestSandboxesClient:
 
     def test_create_prefers_otel_export_over_legacy_telemetry(self, mock_transport, monkeypatch):
         mock_transport.request_json.return_value = {
-            "id": "sbx-1", "template_id": "tpl-1", "vcpu": 2, "memory_mib": 2048,
-            "disk_mib": 10240, "state": "starting", "auto_pause": False, "created_at": "",
+            "id": "sbx-1", "template_id": "tpl-1", "vcpu": 2, "memory": 2048,
+            "disk": 10240, "timeout": 300, "state": "starting", "auto_pause": False, "created_at": "",
         }
 
         SandboxesClient(mock_transport, sandbox_domain="s.dev").create(
