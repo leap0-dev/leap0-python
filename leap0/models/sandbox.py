@@ -156,8 +156,8 @@ class CreatePresignedURLParams(BaseModel):
     def _validate_values(self) -> CreatePresignedURLParams:
         if not 1 <= self.port <= 65535:
             raise ValueError("port must be between 1 and 65535")
-        if self.expires_in is not None and not 1 <= self.expires_in <= 604800:
-            raise ValueError("expires_in must be between 1 and 604800")
+        if self.expires_in is not None and self.expires_in < 1:
+            raise ValueError("expires_in must be at least 1")
         return self
 
     def to_payload(self) -> CreatePresignedURLRequestDict:
@@ -281,7 +281,6 @@ class PresignedURL:
     id: str
     token: str
     url: str
-    host: str
     sandbox_id: str
     port: int
     expires_at: str
@@ -292,9 +291,8 @@ class PresignedURL:
         presigned_id = data.get("id")
         token = data.get("token")
         url = data.get("url")
-        host = data.get("host")
         sandbox_id = data.get("sandbox_id")
-        if not all(isinstance(value, str) and value.strip() for value in (presigned_id, token, url, host, sandbox_id)):
+        if not all(isinstance(value, str) and value.strip() for value in (presigned_id, token, url, sandbox_id)):
             raise ValueError("PresignedURL response missing required non-empty string fields")
         port = data.get("port")
         if not isinstance(port, int):
@@ -303,7 +301,6 @@ class PresignedURL:
             id=presigned_id,
             token=token,
             url=url,
-            host=host,
             sandbox_id=sandbox_id,
             port=port,
             expires_at=data.get("expires_at", ""),

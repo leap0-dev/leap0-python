@@ -71,7 +71,6 @@ class PresignedURLResponseDict(TypedDict):
     id: str
     token: str
     url: str
-    host: str
     sandbox_id: str
     port: int
     expires_at: str
