@@ -163,10 +163,9 @@ class TestAsyncSandboxesClient:
     def test_create_presigned_url(self, async_mock_transport):
         async def run() -> None:
             async_mock_transport.request_json.return_value = {
-                "id": "psu_1",
+                "id": "psu-1",
                 "token": "tok_1",
                 "url": "https://tok_1.leap0.app",
-                "host": "tok_1.leap0.app",
                 "sandbox_id": "sbx-1",
                 "port": 8080,
                 "expires_at": "2026-01-01T00:15:00Z",
@@ -188,10 +187,10 @@ class TestAsyncSandboxesClient:
 
     def test_delete_presigned_url(self, async_mock_transport):
         async def run() -> None:
-            await AsyncSandboxesClient(async_mock_transport, sandbox_domain="s.dev").delete_presigned_url("sbx-1", "psu_1")
+            await AsyncSandboxesClient(async_mock_transport, sandbox_domain="s.dev").delete_presigned_url("sbx-1", "psu-1")
 
             args, kwargs = async_mock_transport.request.call_args
-            assert args == ("DELETE", "/v1/sandbox/sbx-1/presigned-url/psu_1")
+            assert args == ("DELETE", "/v1/sandbox/sbx-1/presigned-url/psu-1")
             assert kwargs["expected_status"] == 204
 
         asyncio.run(run())
@@ -261,7 +260,7 @@ class TestAsyncSandbox:
                 return None
 
             async def delete_presigned_url(sandbox: object, presigned_url_id: str, http_timeout: float | None = None):
-                assert presigned_url_id == "psu_1"
+                assert presigned_url_id == "psu-1"
                 assert http_timeout == 3.5
 
             sandboxes.create_presigned_url = create_presigned_url
@@ -269,6 +268,6 @@ class TestAsyncSandbox:
             sandbox = AsyncSandbox(fake_client, Sandbox(id="sbx-1", state="running"))
 
             await sandbox.create_presigned_url(port=8080, expires_in=900, http_timeout=2.5)
-            await sandbox.delete_presigned_url("psu_1", http_timeout=3.5)
+            await sandbox.delete_presigned_url("psu-1", http_timeout=3.5)
 
         asyncio.run(run())

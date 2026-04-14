@@ -81,22 +81,21 @@ class TestCreatePresignedURLParams:
             CreatePresignedURLParams(port=0)
 
         with pytest.raises(ValueError, match="expires_in"):
-            CreatePresignedURLParams(port=8080, expires_in=604801)
+            CreatePresignedURLParams(port=8080, expires_in=0)
 
 
 class TestPresignedURL:
     def test_from_dict(self):
         result = PresignedURL.from_dict({
-            "id": "psu_1",
+            "id": "psu-1",
             "token": "tok_1",
             "url": "https://tok_1.leap0.app",
-            "host": "tok_1.leap0.app",
             "sandbox_id": "sbx_1",
             "port": 8080,
             "expires_at": "2026-01-01T00:15:00Z",
             "created_at": "2026-01-01T00:00:00Z",
         })
 
-        assert result.id == "psu_1"
-        assert result.host == "tok_1.leap0.app"
+        assert result.id == "psu-1"
+        assert result.url == "https://tok_1.leap0.app"
         assert result.port == 8080
