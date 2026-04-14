@@ -111,6 +111,18 @@ class TestPresignedURL:
                 "expires_at": "",
             })
 
+    def test_from_dict_rejects_invalid_port(self):
+        with pytest.raises(ValueError, match="invalid 'port'.*0"):
+            PresignedURL.from_dict({
+                "id": "psu-1",
+                "token": "tok_1",
+                "url": "https://tok_1.leap0.app",
+                "sandbox_id": "sbx_1",
+                "port": 0,
+                "expires_at": "2026-01-01T00:15:00Z",
+                "created_at": "2026-01-01T00:00:00Z",
+            })
+
     def test_repr_redacts_sensitive_fields(self):
         result = PresignedURL.from_dict({
             "id": "psu-1",

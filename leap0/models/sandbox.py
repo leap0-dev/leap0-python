@@ -308,8 +308,8 @@ class PresignedURL:
         if not all(isinstance(value, str) and value.strip() for value in (presigned_id, token, url, sandbox_id)):
             raise ValueError("PresignedURL response missing required non-empty string fields")
         port = data.get("port")
-        if not isinstance(port, int):
-            raise ValueError(f"PresignedURL response missing required integer 'port', got: {port!r}")
+        if not isinstance(port, int) or not 1 <= port <= 65535:
+            raise ValueError(f"PresignedURL response has invalid 'port', got: {port!r}")
         expires_at = data.get("expires_at")
         created_at = data.get("created_at")
         if not all(isinstance(value, str) and value.strip() for value in (expires_at, created_at)):

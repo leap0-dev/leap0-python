@@ -11,9 +11,8 @@ from ._transport import Transport
 class SshClient:
     """Manage SSH access credentials for a sandbox.
     
-        Each sandbox supports a single set of SSH credentials at a time. Creating
-        access when credentials already exist returns 409 Conflict. Use
-        :meth:`regenerate_access` to rotate credentials without revoking first.
+        Each sandbox supports up to 10 active SSH credentials at a time. Target a
+        specific credential ID when validating, deleting, or regenerating credentials.
     
         Example:
             ```python
@@ -47,22 +46,23 @@ class SshClient:
         return SshAccess.from_dict(cast(dict, data))
 
     @intercept_errors("Failed to delete SSH access: ")
-    def delete_access(self, sandbox: SandboxRef, http_timeout: float | None = None) -> None:
-        """Revoke SSH access for a sandbox. The credential is invalidated immediately.
+    def delete_access(self, sandbox: SandboxRef, *, id: str, http_timeout: float | None = None) -> None:
+        """Revoke a specific SSH access credential. The credential is invalidated immediately.
 
         Args:
             sandbox: Sandbox ID or object.
+            id: SSH credential ID.
             http_timeout: Optional HTTP request timeout in seconds for this SDK call.
         """
-        self._transport.request("DELETE", f"/v1/sandbox/{sandbox_id_of(sandbox)}/ssh/access", expected_status=204, timeout=http_timeout)
+        self._transport.request("DELETE", f"/v1/sandbox/{sandbox_id_of(sandbox)}/ssh/{id}", expected_status=204, timeout=http_timeout)
 
     @intercept_errors("Failed to validate SSH access: ")
-    def validate_access(self, sandbox: SandboxRef, *, access_id: str, password: str, http_timeout: float | None = None) -> SshValidation:
-        """Check whether an SSH access credential is still valid and not expired.
+    def validate_access(self, sandbox: SandboxRef, *, id: str, password: str, http_timeout: float | None = None) -> SshValidation:
+        """Check whether a specific SSH access credential is still valid and not expired.
 
         Args:
             sandbox: Sandbox ID or object.
-            access_id: SSH access identifier.
+            id: SSH credential ID.
             password: SSH password.
             http_timeout: Optional HTTP request timeout in seconds for this SDK call.
 
@@ -71,22 +71,23 @@ class SshClient:
         """
         data = self._transport.request_json(
             "POST",
-            f"/v1/sandbox/{sandbox_id_of(sandbox)}/ssh/validate",
-            json={"id": access_id, "password": password},
+            f"/v1/sandbox/{sandbox_id_of(sandbox)}/ssh/{id}/validate",
+            json={"password": password},
             timeout=http_timeout,
         )
         return SshValidation.from_dict(cast(dict, data))
 
     @intercept_errors("Failed to regenerate SSH access: ")
-    def regenerate_access(self, sandbox: SandboxRef, http_timeout: float | None = None) -> SshAccess:
-        """Invalidate the current credential and generate a new one. The expiry is also reset.
+    def regenerate_access(self, sandbox: SandboxRef, *, id: str, http_timeout: float | None = None) -> SshAccess:
+        """Invalidate a specific credential and generate a new one. The expiry is also reset.
 
         Args:
             sandbox: Sandbox ID or object.
+            id: SSH credential ID.
             http_timeout: Optional HTTP request timeout in seconds for this SDK call.
 
         Returns:
             SshAccess: Newly generated SSH credential bundle.
         """
-        data = self._transport.request_json("POST", f"/v1/sandbox/{sandbox_id_of(sandbox)}/ssh/regen", timeout=http_timeout)
+        data = self._transport.request_json("POST", f"/v1/sandbox/{sandbox_id_of(sandbox)}/ssh/{id}/regen", timeout=http_timeout)
         return SshAccess.from_dict(cast(dict, data))
