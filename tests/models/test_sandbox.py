@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from leap0.models.sandbox import CreateSandboxParams, Sandbox, SandboxStatus, _validate_network_policy, sandbox_id_of
+from leap0.models.sandbox import CreatePresignedURLParams, CreateSandboxParams, PresignedURL, Sandbox, SandboxStatus, _validate_network_policy, sandbox_id_of
 
 
 class TestSandboxIdOf:
@@ -73,3 +73,30 @@ class TestCreateSandboxParams:
 
         with pytest.raises(ValueError, match=r"transforms\[0\] must be a mapping"):
             _validate_network_policy({"mode": "custom", "transforms": ["bad"]})
+
+
+class TestCreatePresignedURLParams:
+    def test_rejects_invalid_values(self):
+        with pytest.raises(ValueError, match="port"):
+            CreatePresignedURLParams(port=0)
+
+        with pytest.raises(ValueError, match="expires_in"):
+            CreatePresignedURLParams(port=8080, expires_in=604801)
+
+
+class TestPresignedURL:
+    def test_from_dict(self):
+        result = PresignedURL.from_dict({
+            "id": "psu_1",
+            "token": "tok_1",
+            "url": "https://tok_1.leap0.app",
+            "host": "tok_1.leap0.app",
+            "sandbox_id": "sbx_1",
+            "port": 8080,
+            "expires_at": "2026-01-01T00:15:00Z",
+            "created_at": "2026-01-01T00:00:00Z",
+        })
+
+        assert result.id == "psu_1"
+        assert result.host == "tok_1.leap0.app"
+        assert result.port == 8080

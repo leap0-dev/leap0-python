@@ -160,6 +160,42 @@ class TestAsyncSandboxesClient:
 
         asyncio.run(run())
 
+    def test_create_presigned_url(self, async_mock_transport):
+        async def run() -> None:
+            async_mock_transport.request_json.return_value = {
+                "id": "psu_1",
+                "token": "tok_1",
+                "url": "https://tok_1.leap0.app",
+                "host": "tok_1.leap0.app",
+                "sandbox_id": "sbx-1",
+                "port": 8080,
+                "expires_at": "2026-01-01T00:15:00Z",
+                "created_at": "2026-01-01T00:00:00Z",
+            }
+
+            result = await AsyncSandboxesClient(async_mock_transport, sandbox_domain="s.dev").create_presigned_url(
+                "sbx-1",
+                port=8080,
+                expires_in=900,
+            )
+
+            args, kwargs = async_mock_transport.request_json.call_args
+            assert args == ("POST", "/v1/sandbox/sbx-1/presigned-url")
+            assert kwargs["json"] == {"port": 8080, "expires_in": 900}
+            assert result.token == "tok_1"
+
+        asyncio.run(run())
+
+    def test_delete_presigned_url(self, async_mock_transport):
+        async def run() -> None:
+            await AsyncSandboxesClient(async_mock_transport, sandbox_domain="s.dev").delete_presigned_url("sbx-1", "psu_1")
+
+            args, kwargs = async_mock_transport.request.call_args
+            assert args == ("DELETE", "/v1/sandbox/sbx-1/presigned-url/psu_1")
+            assert kwargs["expected_status"] == 204
+
+        asyncio.run(run())
+
 
 
 class TestAsyncSandbox:
@@ -208,5 +244,31 @@ class TestAsyncSandbox:
 
             assert await sandbox.get_user_home_dir(http_timeout=1.5) == "/home/steven"
             assert await sandbox.get_workdir(http_timeout=2.5) == "/home/steve/agent"
+
+        asyncio.run(run())
+
+    def test_presigned_url_helpers_delegate_to_sandboxes_client(self):
+        async def run() -> None:
+            sandboxes = SimpleNamespace()
+            fake_client = SimpleNamespace(
+                _filesystem=SimpleNamespace(), _git=SimpleNamespace(), _process=SimpleNamespace(), _pty=SimpleNamespace(),
+                _lsp=SimpleNamespace(), _ssh=SimpleNamespace(), _code_interpreter=SimpleNamespace(), _desktop=SimpleNamespace(),
+                sandboxes=sandboxes,
+            )
+
+            async def create_presigned_url(sandbox: object, **kwargs):
+                assert kwargs == {"port": 8080, "expires_in": 900, "http_timeout": 2.5}
+                return None
+
+            async def delete_presigned_url(sandbox: object, presigned_url_id: str, http_timeout: float | None = None):
+                assert presigned_url_id == "psu_1"
+                assert http_timeout == 3.5
+
+            sandboxes.create_presigned_url = create_presigned_url
+            sandboxes.delete_presigned_url = delete_presigned_url
+            sandbox = AsyncSandbox(fake_client, Sandbox(id="sbx-1", state="running"))
+
+            await sandbox.create_presigned_url(port=8080, expires_in=900, http_timeout=2.5)
+            await sandbox.delete_presigned_url("psu_1", http_timeout=3.5)
 
         asyncio.run(run())

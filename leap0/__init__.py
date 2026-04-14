@@ -75,8 +75,10 @@ if TYPE_CHECKING:
     from .models.process import ProcessResult
     from .models.pty import CreatePtySessionParams, PtyConnection, PtySession
     from .models.sandbox import (
+        CreatePresignedURLParams,
         CreateSandboxParams,
         NetworkPolicyMode,
+        PresignedURL,
         SandboxListItem,
         SandboxListResponse,
         SandboxState,
@@ -144,6 +146,7 @@ __all__ = [
     "CodeExecutionResult",
     "CodeInterpreterClient",
     "CreatePtySessionParams",
+    "CreatePresignedURLParams",
     "CreateSandboxParams",
     "CreateSnapshotParams",
     "CreateTemplateParams",
@@ -191,6 +194,7 @@ __all__ = [
     "NetworkPolicyMode",
     "ProcessClient",
     "ProcessResult",
+    "PresignedURL",
     "PtyClient",
     "PtyConnection",
     "PtySession",
@@ -266,6 +270,7 @@ _DYNAMIC_IMPORTS: dict[str, tuple[str, str]] = {
     "Leap0TimeoutError": (".models.errors", "Leap0TimeoutError"),
     "Leap0WebSocketError": (".models.errors", "Leap0WebSocketError"),
     "CreateSandboxParams": (".models.sandbox", "CreateSandboxParams"),
+    "CreatePresignedURLParams": (".models.sandbox", "CreatePresignedURLParams"),
     "NetworkPolicyMode": (".models.sandbox", "NetworkPolicyMode"),
     "SandboxListItem": (".models.sandbox", "SandboxListItem"),
     "SandboxListResponse": (".models.sandbox", "SandboxListResponse"),
@@ -288,6 +293,7 @@ _DYNAMIC_IMPORTS: dict[str, tuple[str, str]] = {
     "GitCommitResult": (".models.git", "GitCommitResult"),
     "GitResult": (".models.git", "GitResult"),
     "ProcessResult": (".models.process", "ProcessResult"),
+    "PresignedURL": (".models.sandbox", "PresignedURL"),
     "CreatePtySessionParams": (".models.pty", "CreatePtySessionParams"),
     "PtyConnection": (".models.pty", "PtyConnection"),
     "PtySession": (".models.pty", "PtySession"),

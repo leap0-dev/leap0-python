@@ -12,8 +12,10 @@ from pydantic import BaseModel, ConfigDict, model_validator
 from .._internal.types import SandboxHandle
 from .._internal.types import JsonObject
 from .._schemas.sandbox import (
+    CreatePresignedURLRequestDict,
     ListSandboxesResponseDict,
     NetworkPolicyDict,
+    PresignedURLResponseDict,
     SandboxCreateResponseDict,
     SandboxListItemResponseDict,
     SandboxStatusResponseDict,
@@ -141,6 +143,29 @@ class CreateSandboxParams(BaseModel):
 
 CreateSandboxParams.model_rebuild(_types_namespace={"NetworkPolicyMode": NetworkPolicyMode})
 
+
+class CreatePresignedURLParams(BaseModel):
+    """Validated presigned URL creation parameters."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    port: int
+    expires_in: int | None = None
+
+    @model_validator(mode="after")
+    def _validate_values(self) -> CreatePresignedURLParams:
+        if not 1 <= self.port <= 65535:
+            raise ValueError("port must be between 1 and 65535")
+        if self.expires_in is not None and not 1 <= self.expires_in <= 604800:
+            raise ValueError("expires_in must be between 1 and 604800")
+        return self
+
+    def to_payload(self) -> CreatePresignedURLRequestDict:
+        return self.model_dump(exclude_none=True)
+
+
+CreatePresignedURLParams.model_rebuild()
+
 @dataclass(slots=True)
 class Sandbox(SandboxHandle):
     """Sandbox model returned by sandbox creation APIs."""
@@ -246,6 +271,43 @@ class SandboxListResponse:
         return cls(
             items=[SandboxListItem.from_dict(item) for item in data.get("items", [])],
             total_items=int(data.get("total_items", 0)),
+        )
+
+
+@dataclass(slots=True)
+class PresignedURL:
+    """Presigned URL response returned by sandbox sharing APIs."""
+
+    id: str
+    token: str
+    url: str
+    host: str
+    sandbox_id: str
+    port: int
+    expires_at: str
+    created_at: str
+
+    @classmethod
+    def from_dict(cls, data: PresignedURLResponseDict) -> PresignedURL:
+        presigned_id = data.get("id")
+        token = data.get("token")
+        url = data.get("url")
+        host = data.get("host")
+        sandbox_id = data.get("sandbox_id")
+        if not all(isinstance(value, str) and value.strip() for value in (presigned_id, token, url, host, sandbox_id)):
+            raise ValueError("PresignedURL response missing required non-empty string fields")
+        port = data.get("port")
+        if not isinstance(port, int):
+            raise ValueError(f"PresignedURL response missing required integer 'port', got: {port!r}")
+        return cls(
+            id=presigned_id,
+            token=token,
+            url=url,
+            host=host,
+            sandbox_id=sandbox_id,
+            port=port,
+            expires_at=data.get("expires_at", ""),
+            created_at=data.get("created_at", ""),
         )
 
 SandboxRef: TypeAlias = str | SandboxHandle

@@ -168,6 +168,17 @@ ssh = sandbox.ssh.create_access()
 print(ssh.hostname, ssh.port, ssh.username)
 ```
 
+### Presigned URLs
+
+Create a temporary public URL for a sandbox port.
+
+```python
+presigned = sandbox.create_presigned_url(port=8080, expires_in=900)
+print(presigned.url)
+
+sandbox.delete_presigned_url(presigned.id)
+```
+
 ### Desktop Automation
 
 Control a graphical desktop inside the sandbox. Take screenshots, move the pointer, click, type, and record the screen.
