@@ -10,10 +10,7 @@ from ._transport import AsyncTransport
 
 class AsyncSshClient:
     """Manage SSH access credentials for a sandbox.
-    
-        Each sandbox supports up to 10 active SSH credentials at a time. Target a
-        specific credential ID when validating, deleting, or regenerating credentials.
-    
+
         Example:
             ```python
             sandbox = await client.sandboxes.create()

@@ -10,10 +10,7 @@ from ._transport import Transport
 
 class SshClient:
     """Manage SSH access credentials for a sandbox.
-    
-        Each sandbox supports up to 10 active SSH credentials at a time. Target a
-        specific credential ID when validating, deleting, or regenerating credentials.
-    
+
         Example:
             ```python
             sandbox = client.sandboxes.create()
