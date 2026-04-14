@@ -32,7 +32,7 @@ class TestSandboxesClient:
     def test_list(self, mock_transport):
         mock_transport.request_json.return_value = {
             "items": [{
-                "id": "sbx-1", "template_id": "tpl-1", "pod_id": "pod-1", "state": "running",
+                "id": "sbx-1", "template_id": "tpl-1", "state": "running",
                 "launch_time": "2026-01-01T00:00:05Z", "state_change_time": "2026-01-01T00:00:10Z",
                 "timeout_at": 1735689900, "created_at": "2026-01-01T00:00:00Z",
             }],
@@ -53,7 +53,6 @@ class TestSandboxesClient:
             "page-size": 10,
         }
         assert result.total_items == 1
-        assert result.items[0].pod_id == "pod-1"
 
     def test_list_validates_input(self, mock_transport):
         with pytest.raises(Leap0Error, match="page_size"):

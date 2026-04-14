@@ -208,7 +208,6 @@ class SandboxListItem:
     """Summary entry returned by the sandbox list API."""
     id: str
     template_id: str
-    pod_id: str
     state: SandboxState | str
     launch_time: str | None = None
     state_change_time: str | None = None
@@ -228,7 +227,6 @@ class SandboxListItem:
         return cls(
             id=sandbox_id,
             template_id=data.get("template_id", ""),
-            pod_id=data.get("pod_id", ""),
             state=state,
             launch_time=launch_time if isinstance(launch_time, str) else None,
             state_change_time=state_change_time if isinstance(state_change_time, str) else None,

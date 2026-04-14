@@ -44,7 +44,7 @@ class TestAsyncSandboxesClient:
         async def run() -> None:
             async_mock_transport.request_json.return_value = {
                 "items": [{
-                    "id": "sbx-1", "template_id": "tpl-1", "pod_id": "pod-1", "state": "running",
+                    "id": "sbx-1", "template_id": "tpl-1", "state": "running",
                     "created_at": "2026-01-01T00:00:00Z",
                 }],
                 "total_items": 1,
