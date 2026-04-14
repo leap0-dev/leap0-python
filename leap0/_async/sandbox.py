@@ -14,14 +14,16 @@ from ..models.config import (
     DEFAULT_VCPU,
 )
 from ..models.sandbox import (
+    CreatePresignedURLParams,
     CreateSandboxParams,
+    PresignedURL,
     Sandbox as SandboxData,
     SandboxListResponse,
     SandboxRef,
     SandboxStatus,
     sandbox_id_of,
 )
-from .._schemas.sandbox import ListSandboxesResponseDict, NetworkPolicyDict, SandboxCreateResponseDict, SandboxStatusResponseDict
+from .._schemas.sandbox import ListSandboxesResponseDict, NetworkPolicyDict, PresignedURLResponseDict, SandboxCreateResponseDict, SandboxStatusResponseDict
 from .._utils.errors import intercept_errors
 from .._utils.url import ensure_leading_slash, sandbox_base_url, websocket_url_from_http
 from ._transport import AsyncTransport
@@ -129,6 +131,25 @@ class AsyncSandbox(SandboxHandle):
             http_timeout: Optional HTTP request timeout in seconds for this SDK call.
         """
         await self._client.sandboxes.delete(self, http_timeout=http_timeout)
+
+    async def create_presigned_url(
+        self,
+        *,
+        port: int,
+        expires_in: int | None = None,
+        http_timeout: float | None = None,
+    ) -> PresignedURL:
+        """Create a temporary public URL for a specific sandbox port."""
+        return await self._client.sandboxes.create_presigned_url(
+            self,
+            port=port,
+            expires_in=expires_in,
+            http_timeout=http_timeout,
+        )
+
+    async def delete_presigned_url(self, presigned_url_id: str, http_timeout: float | None = None) -> None:
+        """Delete a previously issued presigned URL."""
+        await self._client.sandboxes.delete_presigned_url(self, presigned_url_id, http_timeout=http_timeout)
 
     def invoke_url(self, path: str = "/", *, port: int | None = None) -> str:
         """Build an HTTPS URL for this sandbox.
@@ -400,6 +421,37 @@ class AsyncSandboxesClient(Generic[AsyncSandboxT]):
         if not isinstance(value, str):
             raise ValueError("Sandbox workdir response missing 'workdir'")
         return value
+
+    @intercept_errors("Failed to create presigned URL: ")
+    async def create_presigned_url(
+        self,
+        sandbox: SandboxRef,
+        *,
+        port: int,
+        expires_in: int | None = None,
+        http_timeout: float | None = None,
+    ) -> PresignedURL:
+        params = CreatePresignedURLParams(port=port, expires_in=expires_in)
+        data: PresignedURLResponseDict = await self._transport.request_json(
+            "POST",
+            f"/v1/sandbox/{sandbox_id_of(sandbox)}/presigned-url",
+            json=params.to_payload(),
+            expected_status=201,
+            timeout=http_timeout,
+        )
+        return PresignedURL.from_dict(data)
+
+    @intercept_errors("Failed to delete presigned URL: ")
+    async def delete_presigned_url(self, sandbox: SandboxRef, presigned_url_id: str, http_timeout: float | None = None) -> None:
+        id_value = presigned_url_id.strip()
+        if not id_value:
+            raise ValueError("presigned_url_id must be a non-empty string")
+        await self._transport.request(
+            "DELETE",
+            f"/v1/sandbox/{sandbox_id_of(sandbox)}/presigned-url/{id_value}",
+            expected_status=204,
+            timeout=http_timeout,
+        )
 
 
     def invoke_url(self, sandbox: SandboxRef, path: str = "/", *, port: int | None = None) -> str:

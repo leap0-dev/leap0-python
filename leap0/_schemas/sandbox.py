@@ -56,3 +56,23 @@ class ListSandboxesResponseDict(TypedDict):
     """Wire schema for paginated sandbox list responses."""
     items: list[SandboxListItemResponseDict]
     total_items: int
+
+
+class CreatePresignedURLRequestDict(TypedDict, total=False):
+    """Wire schema for presigned URL creation requests."""
+
+    port: Required[int]
+    expires_in: int
+
+
+class PresignedURLResponseDict(TypedDict):
+    """Wire schema for presigned URL responses."""
+
+    id: str
+    token: str
+    url: str
+    host: str
+    sandbox_id: str
+    port: int
+    expires_at: str
+    created_at: str

@@ -91,6 +91,38 @@ class TestSandboxesClient:
         assert result == "/home/steve/agent"
         assert mock_transport.request_json.call_args[0][1] == "/v1/sandbox/sbx-1/system/workdir"
 
+    def test_create_presigned_url(self, mock_transport):
+        mock_transport.request_json.return_value = {
+            "id": "psu_1",
+            "token": "tok_1",
+            "url": "https://tok_1.leap0.app",
+            "host": "tok_1.leap0.app",
+            "sandbox_id": "sbx-1",
+            "port": 8080,
+            "expires_at": "2026-01-01T00:15:00Z",
+            "created_at": "2026-01-01T00:00:00Z",
+        }
+
+        result = SandboxesClient(mock_transport, sandbox_domain="s.dev").create_presigned_url(
+            "sbx-1",
+            port=8080,
+            expires_in=900,
+        )
+
+        args, kwargs = mock_transport.request_json.call_args
+        assert args == ("POST", "/v1/sandbox/sbx-1/presigned-url")
+        assert kwargs["json"] == {"port": 8080, "expires_in": 900}
+        assert result.token == "tok_1"
+
+    def test_delete_presigned_url(self, mock_transport):
+        mock_transport.request.return_value = MagicMock(status_code=204)
+
+        SandboxesClient(mock_transport, sandbox_domain="s.dev").delete_presigned_url("sbx-1", "psu_1")
+
+        args, kwargs = mock_transport.request.call_args
+        assert args == ("DELETE", "/v1/sandbox/sbx-1/presigned-url/psu_1")
+        assert kwargs["expected_status"] == 204
+
 
     def test_accepts_sandbox_object(self, mock_transport):
         mock_transport.request_json.return_value = {
@@ -257,6 +289,32 @@ class TestRichSandbox:
 
         sandboxes.pause.assert_called_once_with(sandbox, http_timeout=7.5)
         assert sandbox.state == "paused"
+
+    def test_presigned_url_helpers_delegate_to_sandboxes_client(self):
+        sandboxes = MagicMock()
+        client = SimpleNamespace(
+            _filesystem=MagicMock(),
+            _git=MagicMock(),
+            _process=MagicMock(),
+            _pty=MagicMock(),
+            _lsp=MagicMock(),
+            _ssh=MagicMock(),
+            _code_interpreter=MagicMock(),
+            _desktop=MagicMock(),
+            sandboxes=sandboxes,
+        )
+        sandbox = RichSandbox(client, Sandbox(id="sbx-1", state="running"))
+
+        sandbox.create_presigned_url(port=8080, expires_in=900, http_timeout=2.5)
+        sandbox.delete_presigned_url("psu_1", http_timeout=3.5)
+
+        sandboxes.create_presigned_url.assert_called_once_with(
+            sandbox,
+            port=8080,
+            expires_in=900,
+            http_timeout=2.5,
+        )
+        sandboxes.delete_presigned_url.assert_called_once_with(sandbox, "psu_1", http_timeout=3.5)
 
     def test_runtime_info_helpers_delegate_to_sandboxes_client(self):
         sandboxes = MagicMock()
