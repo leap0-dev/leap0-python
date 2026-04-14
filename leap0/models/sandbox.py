@@ -286,6 +286,19 @@ class PresignedURL:
     expires_at: str
     created_at: str
 
+    def __repr__(self) -> str:
+        return (
+            "PresignedURL("
+            f"id={self.id!r}, "
+            "token='<redacted>', "
+            "url='<redacted>', "
+            f"sandbox_id={self.sandbox_id!r}, "
+            f"port={self.port!r}, "
+            f"expires_at={self.expires_at!r}, "
+            f"created_at={self.created_at!r}"
+            ")"
+        )
+
     @classmethod
     def from_dict(cls, data: PresignedURLResponseDict) -> PresignedURL:
         presigned_id = data.get("id")
@@ -297,14 +310,18 @@ class PresignedURL:
         port = data.get("port")
         if not isinstance(port, int):
             raise ValueError(f"PresignedURL response missing required integer 'port', got: {port!r}")
+        expires_at = data.get("expires_at")
+        created_at = data.get("created_at")
+        if not all(isinstance(value, str) and value.strip() for value in (expires_at, created_at)):
+            raise ValueError("PresignedURL response missing required non-empty timestamp fields")
         return cls(
             id=presigned_id,
             token=token,
             url=url,
             sandbox_id=sandbox_id,
             port=port,
-            expires_at=data.get("expires_at", ""),
-            created_at=data.get("created_at", ""),
+            expires_at=expires_at,
+            created_at=created_at,
         )
 
 SandboxRef: TypeAlias = str | SandboxHandle
