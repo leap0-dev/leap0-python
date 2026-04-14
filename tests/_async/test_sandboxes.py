@@ -181,6 +181,7 @@ class TestAsyncSandboxesClient:
             args, kwargs = async_mock_transport.request_json.call_args
             assert args == ("POST", "/v1/sandbox/sbx-1/presigned-url")
             assert kwargs["json"] == {"port": 8080, "expires_in": 900}
+            assert kwargs["expected_status"] == 201
             assert result.token == "tok_1"
 
         asyncio.run(run())

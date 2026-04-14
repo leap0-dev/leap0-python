@@ -111,6 +111,7 @@ class TestSandboxesClient:
         args, kwargs = mock_transport.request_json.call_args
         assert args == ("POST", "/v1/sandbox/sbx-1/presigned-url")
         assert kwargs["json"] == {"port": 8080, "expires_in": 900}
+        assert kwargs["expected_status"] == 201
         assert result.token == "tok_1"
 
     def test_delete_presigned_url(self, mock_transport):
