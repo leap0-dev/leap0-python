@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from pydantic import ValidationError
 
 from leap0.models.sandbox import CreatePresignedURLParams, CreateSandboxParams, PresignedURL, Sandbox, SandboxStatus, _validate_network_policy, sandbox_id_of
 
@@ -77,10 +78,10 @@ class TestCreateSandboxParams:
 
 class TestCreatePresignedURLParams:
     def test_rejects_invalid_values(self):
-        with pytest.raises(ValueError, match="port"):
+        with pytest.raises(ValidationError, match="port"):
             CreatePresignedURLParams(port=0)
 
-        with pytest.raises(ValueError, match="expires_in"):
+        with pytest.raises(ValidationError, match="expires_in"):
             CreatePresignedURLParams(port=8080, expires_in=0)
 
 
@@ -112,7 +113,7 @@ class TestPresignedURL:
             })
 
     def test_from_dict_rejects_invalid_port(self):
-        with pytest.raises(ValueError, match="invalid 'port'.*0"):
+        with pytest.raises(ValueError, match=r"invalid 'port'.*0"):
             PresignedURL.from_dict({
                 "id": "psu-1",
                 "token": "tok_1",
