@@ -13,10 +13,10 @@ class TestAsyncSandboxesClient:
     def test_create(self, async_mock_transport):
         async def run() -> None:
             async_mock_transport.request_json.return_value = {
-                "id": "sbx-1", "template_id": "tpl-1", "vcpu": 2, "memory_mib": 2048,
-                "disk_mib": 10240, "state": "starting", "auto_pause": False, "created_at": "",
+                "id": "sbx-1", "template_id": "tpl-1", "vcpu": 2, "memory": 2048,
+                "disk": 10240, "timeout": 300, "state": "starting", "auto_pause": False, "created_at": "",
             }
-            result = await AsyncSandboxesClient(async_mock_transport, sandbox_domain="s.dev").create(template_name="my-tpl", vcpu=2, memory_mib=2048)
+            result = await AsyncSandboxesClient(async_mock_transport, sandbox_domain="s.dev").create(template_name="my-tpl", vcpu=2, memory=2048)
             args, kwargs = async_mock_transport.request_json.call_args
             assert args == ("POST", "/v1/sandbox")
             assert kwargs["json"]["template_name"] == "my-tpl"
@@ -32,8 +32,8 @@ class TestAsyncSandboxesClient:
             )
             client = AsyncSandboxesClient(async_mock_transport, sandbox_domain="s.dev", sandbox_factory=lambda data: AsyncSandbox(fake_client, data))
             async_mock_transport.request_json.return_value = {
-                "id": "sbx-1", "template_id": "tpl-1", "vcpu": 2, "memory_mib": 2048,
-                "disk_mib": 10240, "state": "starting", "auto_pause": False, "created_at": "",
+                "id": "sbx-1", "template_id": "tpl-1", "vcpu": 2, "memory": 2048,
+                "disk": 10240, "timeout": 300, "state": "starting", "auto_pause": False, "created_at": "",
             }
             result = await client.create(template_name="my-tpl")
             assert isinstance(result, AsyncSandbox)
@@ -94,8 +94,8 @@ class TestAsyncSandboxesClient:
             monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://collector:4318")
             monkeypatch.setenv("OTEL_EXPORTER_OTLP_HEADERS", "authorization=token")
             async_mock_transport.request_json.return_value = {
-                "id": "sbx-1", "template_id": "tpl-1", "vcpu": 2, "memory_mib": 2048,
-                "disk_mib": 10240, "state": "starting", "auto_pause": False, "created_at": "",
+                "id": "sbx-1", "template_id": "tpl-1", "vcpu": 2, "memory": 2048,
+                "disk": 10240, "timeout": 300, "state": "starting", "auto_pause": False, "created_at": "",
             }
 
             await AsyncSandboxesClient(async_mock_transport, sandbox_domain="s.dev").create(
@@ -125,8 +125,8 @@ class TestAsyncSandboxesClient:
     def test_pause_forwards_http_timeout(self, async_mock_transport):
         async def run() -> None:
             async_mock_transport.request_json.return_value = {
-                "id": "sbx-1", "template_id": "tpl-1", "vcpu": 2, "memory_mib": 2048,
-                "disk_mib": 10240, "state": "paused", "auto_pause": False, "created_at": "",
+                "id": "sbx-1", "template_id": "tpl-1", "vcpu": 2, "memory": 2048,
+                "disk": 10240, "timeout": 300, "state": "paused", "auto_pause": False, "created_at": "",
             }
 
             await AsyncSandboxesClient(async_mock_transport, sandbox_domain="s.dev").pause(

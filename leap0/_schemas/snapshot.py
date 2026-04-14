@@ -12,8 +12,8 @@ class SnapshotCreateResponseDict(TypedDict, total=False):
     name: str
     template_id: str
     vcpu: int
-    memory_mib: int
-    disk_mib: int
+    memory: int
+    disk: int
     state: SandboxState | str
     created_at: str
     network_policy: NetworkPolicyDict | None

@@ -37,7 +37,7 @@ class ResumeSnapshotParams(BaseModel):
 
     snapshot_name: str
     auto_pause: bool = False
-    timeout_min: int | None = None
+    timeout: int | None = None
     network_policy: NetworkPolicyDict | None = None
 
     @model_validator(mode="after")
@@ -47,8 +47,8 @@ class ResumeSnapshotParams(BaseModel):
             raise ValueError("snapshot_name must be a non-empty string")
         if len(snapshot_name) > 64:
             raise ValueError("snapshot_name must be at most 64 characters")
-        if self.timeout_min is not None and not 1 <= self.timeout_min <= 480:
-            raise ValueError("timeout_min must be between 1 and 480 when provided")
+        if self.timeout is not None and not 1 <= self.timeout <= 28800:
+            raise ValueError("timeout must be between 1 and 28800 when provided")
         self.snapshot_name = snapshot_name
         return self
 
@@ -69,8 +69,8 @@ class Snapshot:
     name: str
     template_id: str = ""
     vcpu: int = 0
-    memory_mib: int = 0
-    disk_mib: int = 0
+    memory: int = 0
+    disk: int = 0
     state: SandboxState | str | None = None
     network_policy: NetworkPolicyDict | None = None
     created_at: str = ""
@@ -94,8 +94,8 @@ class Snapshot:
             name=snapshot_name,
             template_id=data.get("template_id", ""),
             vcpu=int(data.get("vcpu", 0)),
-            memory_mib=int(data.get("memory_mib", 0)),
-            disk_mib=int(data.get("disk_mib", 0)),
+            memory=int(data.get("memory", 0)),
+            disk=int(data.get("disk", 0)),
             state=_parse_sandbox_state(state) if state is not None else None,
             network_policy=data.get("network_policy"),
             created_at=data.get("created_at", ""),

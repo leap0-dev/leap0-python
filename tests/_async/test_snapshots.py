@@ -15,7 +15,7 @@ class TestAsyncSnapshotsClient:
         async def run() -> None:
             async_mock_transport.request_json.return_value = {
                 "id": "snap-1", "name": "s", "template_id": "t",
-                "vcpu": 1, "memory_mib": 512, "disk_mib": 10240, "network_policy": None, "created_at": "",
+                "vcpu": 1, "memory": 512, "disk": 10240, "network_policy": None, "created_at": "",
             }
             await AsyncSnapshotsClient(async_mock_transport).create("sbx-1", name="my-snap")
             args, kwargs = async_mock_transport.request_json.call_args
@@ -37,7 +37,7 @@ class TestAsyncSnapshotsClient:
             async_mock_transport.request_json.return_value = {
                 "items": [{
                     "id": "snap-1", "name": "snap-a", "template_id": "tpl-1", "vcpu": 2,
-                    "memory_mib": 1024, "disk_mib": 4096, "created_at": "2026-01-01T00:00:00Z",
+                    "memory": 1024, "disk": 4096, "created_at": "2026-01-01T00:00:00Z",
                 }],
                 "total_items": 1,
             }

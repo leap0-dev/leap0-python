@@ -21,7 +21,7 @@ from .._schemas.sandbox import (
     SandboxStatusResponseDict,
     TransformRuleDict,
 )
-from .config import DEFAULT_MEMORY_MIB, DEFAULT_TEMPLATE_NAME, DEFAULT_TIMEOUT_MIN, DEFAULT_VCPU
+from .config import DEFAULT_MEMORY_MIB, DEFAULT_TEMPLATE_NAME, DEFAULT_TIMEOUT, DEFAULT_VCPU
 
 class SandboxState(str, Enum):
     """Lifecycle states for a sandbox."""
@@ -110,8 +110,8 @@ class CreateSandboxParams(BaseModel):
 
     template_name: str = DEFAULT_TEMPLATE_NAME
     vcpu: int = DEFAULT_VCPU
-    memory_mib: int = DEFAULT_MEMORY_MIB
-    timeout_min: int = DEFAULT_TIMEOUT_MIN
+    memory: int = DEFAULT_MEMORY_MIB
+    timeout: int = DEFAULT_TIMEOUT
     auto_pause: bool = False
     otel_export: bool = False
     env_vars: dict[str, str] | None = None
@@ -126,10 +126,10 @@ class CreateSandboxParams(BaseModel):
             raise ValueError("template_name must be at most 64 characters")
         if not 1 <= self.vcpu <= 8:
             raise ValueError("vcpu must be between 1 and 8")
-        if self.memory_mib < 512 or self.memory_mib > 8192 or self.memory_mib % 2 != 0:
-            raise ValueError("memory_mib must be an even number between 512 and 8192")
-        if not 1 <= self.timeout_min <= 480:
-            raise ValueError("timeout_min must be between 1 and 480")
+        if self.memory < 512 or self.memory > 8192 or self.memory % 2 != 0:
+            raise ValueError("memory must be an even number between 512 and 8192")
+        if not 1 <= self.timeout <= 28800:
+            raise ValueError("timeout must be between 1 and 28800")
         self.network_policy = _validate_network_policy(self.network_policy)
         self.template_name = template_name
         return self
@@ -172,8 +172,9 @@ class Sandbox(SandboxHandle):
     id: str
     template_id: str = ""
     vcpu: int = 0
-    memory_mib: int = 0
-    disk_mib: int = 0
+    memory: int = 0
+    disk: int = 0
+    timeout: int = 0
     state: SandboxState | str = SandboxState.STARTING
     auto_pause: bool = False
     created_at: str = ""
@@ -190,8 +191,9 @@ class Sandbox(SandboxHandle):
             id=sandbox_id,
             template_id=data.get("template_id", ""),
             vcpu=int(data.get("vcpu", 0)),
-            memory_mib=int(data.get("memory_mib", 0)),
-            disk_mib=int(data.get("disk_mib", 0)),
+            memory=int(data.get("memory", 0)),
+            disk=int(data.get("disk", 0)),
+            timeout=int(data.get("timeout", 0)),
             state=state,
             auto_pause=bool(data.get("auto_pause", False)),
             created_at=data.get("created_at", ""),
@@ -204,8 +206,9 @@ class SandboxStatus(SandboxHandle):
     id: str
     template_id: str
     vcpu: int
-    memory_mib: int
-    disk_mib: int
+    memory: int
+    disk: int
+    timeout: int
     state: SandboxState | str
     auto_pause: bool
     created_at: str
@@ -221,8 +224,9 @@ class SandboxStatus(SandboxHandle):
             id=sandbox_id,
             template_id=data.get("template_id", ""),
             vcpu=int(data.get("vcpu", 0)),
-            memory_mib=int(data.get("memory_mib", 0)),
-            disk_mib=int(data.get("disk_mib", 0)),
+            memory=int(data.get("memory", 0)),
+            disk=int(data.get("disk", 0)),
+            timeout=int(data.get("timeout", 0)),
             state=state,
             auto_pause=bool(data.get("auto_pause", False)),
             created_at=data.get("created_at", ""),

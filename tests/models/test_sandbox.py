@@ -14,8 +14,8 @@ class TestSandboxIdOf:
         assert sandbox_id_of(Sandbox(id="sbx-abc")) == "sbx-abc"
 
     def test_from_sandbox_status(self):
-        s = SandboxStatus(id="sbx-xyz", template_id="t", vcpu=1, memory_mib=512,
-                          disk_mib=10240, state="running", auto_pause=False, created_at="")
+        s = SandboxStatus(id="sbx-xyz", template_id="t", vcpu=1, memory=512,
+                          disk=10240, timeout=300, state="running", auto_pause=False, created_at="")
         assert sandbox_id_of(s) == "sbx-xyz"
 
     def test_rejects_unrelated_object_with_id(self):
@@ -28,8 +28,8 @@ class TestSandboxIdOf:
 
 class TestSandbox:
     def test_full_dict(self):
-        s = Sandbox.from_dict({"id": "sbx-1", "template_id": "tpl-1", "vcpu": 2, "memory_mib": 2048,
-                               "disk_mib": 10240, "state": "running", "auto_pause": True,
+        s = Sandbox.from_dict({"id": "sbx-1", "template_id": "tpl-1", "vcpu": 2, "memory": 2048,
+                               "disk": 10240, "timeout": 300, "state": "running", "auto_pause": True,
                                "created_at": "2025-01-01", "network_policy": {"mode": "allow-all"}})
         assert s.id == "sbx-1"
         assert s.vcpu == 2
@@ -45,8 +45,8 @@ class TestSandbox:
 
 class TestSandboxStatus:
     def test_full_dict(self):
-        s = SandboxStatus.from_dict({"id": "sbx-1", "template_id": "tpl-1", "vcpu": 4, "memory_mib": 4096,
-                                     "disk_mib": 10240, "state": "paused", "auto_pause": True, "created_at": "2025-01-01"})
+        s = SandboxStatus.from_dict({"id": "sbx-1", "template_id": "tpl-1", "vcpu": 4, "memory": 4096,
+                                     "disk": 10240, "timeout": 300, "state": "paused", "auto_pause": True, "created_at": "2025-01-01"})
         assert s.state == "paused"
         assert s.vcpu == 4
 

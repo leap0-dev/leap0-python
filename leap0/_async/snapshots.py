@@ -145,7 +145,7 @@ class AsyncSnapshotsClient(Generic[AsyncSnapshotSandboxT]):
         *,
         snapshot_name: str,
         auto_pause: bool = False,
-        timeout_min: int | None = None,
+        timeout: int | None = None,
         network_policy: NetworkPolicyDict | None = None,
         http_timeout: float | None = None,
     ) -> AsyncSnapshotSandboxT | Sandbox:
@@ -154,7 +154,7 @@ class AsyncSnapshotsClient(Generic[AsyncSnapshotSandboxT]):
         Args:
             snapshot_name: Name of the snapshot to restore.
             auto_pause: Automatically pause the restored sandbox on timeout.
-            timeout_min: Sandbox timeout in minutes.
+            timeout: Sandbox timeout in seconds.
             network_policy: Override the network policy from the snapshot.
 
             http_timeout: Optional HTTP request timeout in seconds for this SDK call.
@@ -168,7 +168,7 @@ class AsyncSnapshotsClient(Generic[AsyncSnapshotSandboxT]):
         payload = ResumeSnapshotParams(
             snapshot_name=snapshot_name,
             auto_pause=auto_pause,
-            timeout_min=timeout_min,
+            timeout=timeout,
             network_policy=network_policy,
         ).to_payload()
         data = cast(SandboxCreateResponseDict, await self._transport.request_json(
