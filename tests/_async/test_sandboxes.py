@@ -24,6 +24,43 @@ class TestAsyncSandboxesClient:
 
         asyncio.run(run())
 
+    def test_create_serializes_object_storage_mounts(self, async_mock_transport):
+        async def run() -> None:
+            async_mock_transport.request_json.return_value = {
+                "id": "sbx-1", "template_id": "tpl-1", "vcpu": 2, "memory": 2048,
+                "disk": 10240, "timeout": 300, "state": "starting", "auto_pause": False, "created_at": "",
+                "mounts": [{"id": "mnt-1", "type": "object-storage", "bucket": "project-assets", "mount_path": "/data/assets", "prefix": "docs/", "read_only": True}],
+            }
+            result = await AsyncSandboxesClient(async_mock_transport, sandbox_domain="s.dev").create(
+                mounts=[{"type": "object-storage", "bucket": "project-assets", "mount_path": "/data/assets", "endpoint": "https://storage.example.com", "prefix": "docs/"}],
+            )
+            assert async_mock_transport.request_json.call_args.kwargs["json"]["mounts"] == [{
+                "type": "object-storage",
+                "bucket": "project-assets",
+                "mount_path": "/data/assets",
+                "endpoint": "https://storage.example.com",
+                "prefix": "docs/",
+            }]
+            assert result.mounts is not None
+            assert result.mounts[0].bucket == "project-assets"
+
+        asyncio.run(run())
+
+    def test_get_returns_mounts(self, async_mock_transport):
+        async def run() -> None:
+            async_mock_transport.request_json.return_value = {
+                "id": "sbx-1", "template_id": "tpl-1", "vcpu": 2, "memory": 2048,
+                "disk": 10240, "timeout": 300, "state": "running", "auto_pause": False, "created_at": "",
+                "mounts": [{"id": "mnt-1", "type": "object-storage", "bucket": "project-assets", "mount_path": "/data/assets", "prefix": "docs/", "read_only": True}],
+            }
+
+            result = await AsyncSandboxesClient(async_mock_transport, sandbox_domain="s.dev").get("sbx-1")
+
+            assert result.mounts is not None
+            assert result.mounts[0].id == "mnt-1"
+
+        asyncio.run(run())
+
     def test_factory_returns_async_sandbox(self, async_mock_transport):
         async def run() -> None:
             fake_client = SimpleNamespace(
@@ -196,6 +233,63 @@ class TestAsyncSandboxesClient:
 
         asyncio.run(run())
 
+    def test_add_mount(self, async_mock_transport):
+        async def run() -> None:
+            async_mock_transport.request_json.return_value = {
+                "id": "mnt-1",
+                "type": "object-storage",
+                "bucket": "project-assets",
+                "mount_path": "/data/assets",
+                "prefix": "docs/",
+                "read_only": True,
+            }
+
+            result = await AsyncSandboxesClient(async_mock_transport, sandbox_domain="s.dev").add_mount(
+                "sbx-1",
+                {"type": "object-storage", "bucket": "project-assets", "mount_path": "/data/assets", "endpoint": "https://storage.example.com", "prefix": "docs/"},
+            )
+
+            args, kwargs = async_mock_transport.request_json.call_args
+            assert args == ("POST", "/v1/sandbox/sbx-1/mounts")
+            assert kwargs["expected_status"] == 201
+            assert result.id == "mnt-1"
+
+        asyncio.run(run())
+
+    def test_update_mount(self, async_mock_transport):
+        async def run() -> None:
+            async_mock_transport.request_json.return_value = {
+                "id": "mnt-1",
+                "type": "object-storage",
+                "bucket": "project-assets",
+                "mount_path": "/data/assets",
+                "prefix": "docs/",
+                "read_only": False,
+            }
+
+            result = await AsyncSandboxesClient(async_mock_transport, sandbox_domain="s.dev").update_mount(
+                "sbx-1",
+                "mnt-1",
+                {"prefix": "docs/", "read_only": False},
+            )
+
+            args, kwargs = async_mock_transport.request_json.call_args
+            assert args == ("PATCH", "/v1/sandbox/sbx-1/mounts/mnt-1")
+            assert kwargs["json"] == {"prefix": "docs/", "read_only": False}
+            assert result.read_only is False
+
+        asyncio.run(run())
+
+    def test_delete_mount(self, async_mock_transport):
+        async def run() -> None:
+            await AsyncSandboxesClient(async_mock_transport, sandbox_domain="s.dev").delete_mount("sbx-1", "mnt-1")
+
+            args, kwargs = async_mock_transport.request.call_args
+            assert args == ("DELETE", "/v1/sandbox/sbx-1/mounts/mnt-1")
+            assert kwargs["expected_status"] == 204
+
+        asyncio.run(run())
+
 
 
 class TestAsyncSandbox:
@@ -270,5 +364,40 @@ class TestAsyncSandbox:
 
             await sandbox.create_presigned_url(port=8080, expires_in=900, http_timeout=2.5)
             await sandbox.delete_presigned_url("psu-1", http_timeout=3.5)
+
+        asyncio.run(run())
+
+    def test_mount_helpers_delegate_to_sandboxes_client(self):
+        async def run() -> None:
+            sandboxes = SimpleNamespace()
+            fake_client = SimpleNamespace(
+                _filesystem=SimpleNamespace(), _git=SimpleNamespace(), _process=SimpleNamespace(), _pty=SimpleNamespace(),
+                _lsp=SimpleNamespace(), _ssh=SimpleNamespace(), _code_interpreter=SimpleNamespace(), _desktop=SimpleNamespace(),
+                sandboxes=sandboxes,
+            )
+
+            async def add_mount(sandbox: object, mount: dict[str, str], http_timeout: float | None = None):
+                assert mount["endpoint"] == "https://storage.example.com"
+                assert http_timeout == 1.5
+                return None
+
+            async def update_mount(sandbox: object, mount_id: str, mount: dict[str, str], http_timeout: float | None = None):
+                assert mount_id == "mnt-1"
+                assert mount == {"prefix": "docs/"}
+                assert http_timeout == 2.5
+                return None
+
+            async def delete_mount(sandbox: object, mount_id: str, http_timeout: float | None = None):
+                assert mount_id == "mnt-1"
+                assert http_timeout == 3.5
+
+            sandboxes.add_mount = add_mount
+            sandboxes.update_mount = update_mount
+            sandboxes.delete_mount = delete_mount
+            sandbox = AsyncSandbox(fake_client, Sandbox(id="sbx-1", state="running"))
+
+            await sandbox.add_mount({"type": "object-storage", "bucket": "project-assets", "mount_path": "/data/assets", "endpoint": "https://storage.example.com"}, http_timeout=1.5)
+            await sandbox.update_mount("mnt-1", {"prefix": "docs/"}, http_timeout=2.5)
+            await sandbox.delete_mount("mnt-1", http_timeout=3.5)
 
         asyncio.run(run())

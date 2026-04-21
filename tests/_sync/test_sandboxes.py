@@ -21,13 +21,37 @@ class TestSandboxesClient:
         assert kwargs["json"]["template_name"] == "my-tpl"
         assert result.id == "sbx-1"
 
+    def test_create_serializes_object_storage_mounts(self, mock_transport):
+        mock_transport.request_json.return_value = {
+            "id": "sbx-1", "template_id": "tpl-1", "vcpu": 2, "memory": 2048,
+            "disk": 10240, "timeout": 300, "state": "starting", "auto_pause": False, "created_at": "",
+            "mounts": [{"id": "mnt-1", "type": "object-storage", "bucket": "project-assets", "mount_path": "/data/assets", "prefix": "docs/", "read_only": True}],
+        }
+
+        result = SandboxesClient(mock_transport, sandbox_domain="s.dev").create(
+            mounts=[{"type": "object-storage", "bucket": "project-assets", "mount_path": "/data/assets", "endpoint": "https://storage.example.com", "prefix": "docs/"}],
+        )
+
+        assert mock_transport.request_json.call_args.kwargs["json"]["mounts"] == [{
+            "type": "object-storage",
+            "bucket": "project-assets",
+            "mount_path": "/data/assets",
+            "endpoint": "https://storage.example.com",
+            "prefix": "docs/",
+        }]
+        assert result.mounts is not None
+        assert result.mounts[0].bucket == "project-assets"
+
     def test_get(self, mock_transport):
         mock_transport.request_json.return_value = {
             "id": "sbx-1", "template_id": "t", "vcpu": 1, "memory": 512,
             "disk": 10240, "timeout": 300, "state": "running", "auto_pause": False, "created_at": "",
+            "mounts": [{"id": "mnt-1", "type": "object-storage", "bucket": "project-assets", "mount_path": "/data/assets", "prefix": "docs/", "read_only": True}],
         }
-        SandboxesClient(mock_transport, sandbox_domain="s.dev").get("sbx-1")
+        result = SandboxesClient(mock_transport, sandbox_domain="s.dev").get("sbx-1")
         assert mock_transport.request_json.call_args[0][1] == "/v1/sandbox/sbx-1/"
+        assert result.mounts is not None
+        assert result.mounts[0].id == "mnt-1"
 
     def test_list(self, mock_transport):
         mock_transport.request_json.return_value = {
@@ -121,6 +145,69 @@ class TestSandboxesClient:
 
         args, kwargs = mock_transport.request.call_args
         assert args == ("DELETE", "/v1/sandbox/sbx-1/presigned-url/psu-1")
+        assert kwargs["expected_status"] == 204
+
+    def test_add_mount(self, mock_transport):
+        mock_transport.request_json.return_value = {
+            "id": "mnt-1",
+            "type": "object-storage",
+            "bucket": "project-assets",
+            "mount_path": "/data/assets",
+            "prefix": "docs/",
+            "read_only": True,
+        }
+
+        result = SandboxesClient(mock_transport, sandbox_domain="s.dev").add_mount(
+            "sbx-1",
+            {
+                "type": "object-storage",
+                "bucket": "project-assets",
+                "mount_path": "/data/assets",
+                "endpoint": "https://storage.example.com",
+                "prefix": "docs/",
+            },
+        )
+
+        args, kwargs = mock_transport.request_json.call_args
+        assert args == ("POST", "/v1/sandbox/sbx-1/mounts")
+        assert kwargs["expected_status"] == 201
+        assert kwargs["json"] == {
+            "type": "object-storage",
+            "bucket": "project-assets",
+            "mount_path": "/data/assets",
+            "endpoint": "https://storage.example.com",
+            "prefix": "docs/",
+        }
+        assert result.id == "mnt-1"
+
+    def test_update_mount(self, mock_transport):
+        mock_transport.request_json.return_value = {
+            "id": "mnt-1",
+            "type": "object-storage",
+            "bucket": "project-assets",
+            "mount_path": "/data/assets",
+            "prefix": "docs/",
+            "read_only": False,
+        }
+
+        result = SandboxesClient(mock_transport, sandbox_domain="s.dev").update_mount(
+            "sbx-1",
+            "mnt-1",
+            {"prefix": "docs/", "read_only": False},
+        )
+
+        args, kwargs = mock_transport.request_json.call_args
+        assert args == ("PATCH", "/v1/sandbox/sbx-1/mounts/mnt-1")
+        assert kwargs["json"] == {"prefix": "docs/", "read_only": False}
+        assert result.read_only is False
+
+    def test_delete_mount(self, mock_transport):
+        mock_transport.request.return_value = MagicMock(status_code=204)
+
+        SandboxesClient(mock_transport, sandbox_domain="s.dev").delete_mount("sbx-1", "mnt-1")
+
+        args, kwargs = mock_transport.request.call_args
+        assert args == ("DELETE", "/v1/sandbox/sbx-1/mounts/mnt-1")
         assert kwargs["expected_status"] == 204
 
 
@@ -268,6 +355,31 @@ class TestRichSandbox:
         sandbox.refresh()
 
         assert sandbox.state == "running"
+
+    def test_mount_helpers_delegate_to_sandboxes_client(self):
+        sandboxes = MagicMock()
+        sandboxes.add_mount.return_value = MagicMock(id="mnt-1")
+        sandboxes.update_mount.return_value = MagicMock(id="mnt-1")
+        client = SimpleNamespace(
+            _filesystem=MagicMock(),
+            _git=MagicMock(),
+            _process=MagicMock(),
+            _pty=MagicMock(),
+            _lsp=MagicMock(),
+            _ssh=MagicMock(),
+            _code_interpreter=MagicMock(),
+            _desktop=MagicMock(),
+            sandboxes=sandboxes,
+        )
+        sandbox = RichSandbox(client, Sandbox(id="sbx-1", state="running"))
+
+        sandbox.add_mount({"type": "object-storage", "bucket": "project-assets", "mount_path": "/data/assets", "endpoint": "https://storage.example.com"}, http_timeout=1.5)
+        sandbox.update_mount("mnt-1", {"prefix": "docs/"}, http_timeout=2.5)
+        sandbox.delete_mount("mnt-1", http_timeout=3.5)
+
+        sandboxes.add_mount.assert_called_once_with(sandbox, {"type": "object-storage", "bucket": "project-assets", "mount_path": "/data/assets", "endpoint": "https://storage.example.com"}, http_timeout=1.5)
+        sandboxes.update_mount.assert_called_once_with(sandbox, "mnt-1", {"prefix": "docs/"}, http_timeout=2.5)
+        sandboxes.delete_mount.assert_called_once_with(sandbox, "mnt-1", http_timeout=3.5)
 
     def test_pause_forwards_http_timeout(self):
         sandboxes = MagicMock()

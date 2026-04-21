@@ -15,6 +15,9 @@ from .._schemas.sandbox import (
     CreatePresignedURLRequestDict,
     ListSandboxesResponseDict,
     NetworkPolicyDict,
+    ObjectStorageMountDict,
+    ObjectStorageMountRequestDict,
+    ObjectStorageMountUpdateDict,
     PresignedURLResponseDict,
     SandboxCreateResponseDict,
     SandboxListItemResponseDict,
@@ -104,6 +107,157 @@ def _validate_network_policy(policy: NetworkPolicyDict | None) -> NetworkPolicyD
 
     return policy
 
+
+def _validate_object_storage_mounts(
+    mounts: list[ObjectStorageMountRequestDict] | None,
+) -> list[ObjectStorageMountRequestDict] | None:
+    if mounts is None:
+        return None
+    if len(mounts) > 8:
+        raise ValueError("mounts must contain at most 8 entries")
+
+    normalized: list[ObjectStorageMountRequestDict] = []
+    seen_mount_paths: set[str] = set()
+    for index, mount in enumerate(mounts):
+        if not isinstance(mount, Mapping):
+            raise ValueError(f"mounts[{index}] must be a mapping, got: {mount!r}")
+
+        mount_type = mount.get("type")
+        if mount_type != "object-storage":
+            raise ValueError(f"mounts[{index}].type must be 'object-storage'")
+
+        bucket = mount.get("bucket")
+        if not isinstance(bucket, str) or not bucket.strip():
+            raise ValueError(f"mounts[{index}].bucket must be a non-empty string")
+
+        mount_path = mount.get("mount_path")
+        if not isinstance(mount_path, str) or not mount_path.startswith("/") or mount_path == "/":
+            raise ValueError(f"mounts[{index}].mount_path must be an absolute path")
+        if mount_path in seen_mount_paths:
+            raise ValueError(f"mounts[{index}].mount_path must be unique")
+        seen_mount_paths.add(mount_path)
+
+        endpoint = mount.get("endpoint")
+        if not isinstance(endpoint, str) or not endpoint.strip():
+            raise ValueError(f"mounts[{index}].endpoint must be a non-empty string")
+
+        prefix = mount.get("prefix")
+        if prefix is not None:
+            if not isinstance(prefix, str):
+                raise ValueError(f"mounts[{index}].prefix must be a string")
+            if prefix and (prefix.startswith("/") or not prefix.endswith("/") or ".." in prefix):
+                raise ValueError(
+                    f"mounts[{index}].prefix must be relative, must not contain '..', and must end with '/'")
+
+        read_only = mount.get("read_only")
+        if read_only is not None and not isinstance(read_only, bool):
+            raise ValueError(f"mounts[{index}].read_only must be a boolean")
+
+        access_key_id = mount.get("access_key_id")
+        if access_key_id is not None and not isinstance(access_key_id, str):
+            raise ValueError(f"mounts[{index}].access_key_id must be a string")
+
+        secret_access_key = mount.get("secret_access_key")
+        if secret_access_key is not None and not isinstance(secret_access_key, str):
+            raise ValueError(f"mounts[{index}].secret_access_key must be a string")
+
+        normalized.append(ObjectStorageMountRequestDict(
+            type="object-storage",
+            bucket=bucket.strip(),
+            mount_path=mount_path,
+            endpoint=endpoint.strip(),
+            **({"prefix": prefix} if isinstance(prefix, str) and prefix != "" else {}),
+            **({"read_only": read_only} if isinstance(read_only, bool) else {}),
+            **({"access_key_id": access_key_id} if isinstance(access_key_id, str) and access_key_id != "" else {}),
+            **({"secret_access_key": secret_access_key} if isinstance(secret_access_key, str) and secret_access_key != "" else {}),
+        ))
+
+    return normalized
+
+
+def _validate_object_storage_mount_update(
+    mount: ObjectStorageMountUpdateDict,
+) -> ObjectStorageMountUpdateDict:
+    if not isinstance(mount, Mapping):
+        raise ValueError(f"mount update must be a mapping, got: {mount!r}")
+
+    normalized: dict[str, str | bool] = {}
+
+    if "bucket" in mount:
+        bucket = mount.get("bucket")
+        if not isinstance(bucket, str) or not bucket.strip():
+            raise ValueError("bucket must be a non-empty string")
+        normalized["bucket"] = bucket.strip()
+
+    if "mount_path" in mount:
+        mount_path = mount.get("mount_path")
+        if not isinstance(mount_path, str) or not mount_path.startswith("/") or mount_path == "/":
+            raise ValueError("mount_path must be an absolute path")
+        normalized["mount_path"] = mount_path
+
+    if "endpoint" in mount:
+        endpoint = mount.get("endpoint")
+        if not isinstance(endpoint, str) or not endpoint.strip():
+            raise ValueError("endpoint must be a non-empty string")
+        normalized["endpoint"] = endpoint.strip()
+
+    if "prefix" in mount:
+        prefix = mount.get("prefix")
+        if not isinstance(prefix, str):
+            raise ValueError("prefix must be a string")
+        if prefix and (prefix.startswith("/") or not prefix.endswith("/") or ".." in prefix):
+            raise ValueError("prefix must be relative, must not contain '..', and must end with '/'")
+        normalized["prefix"] = prefix
+
+    if "read_only" in mount:
+        read_only = mount.get("read_only")
+        if not isinstance(read_only, bool):
+            raise ValueError("read_only must be a boolean")
+        normalized["read_only"] = read_only
+
+    if "access_key_id" in mount:
+        access_key_id = mount.get("access_key_id")
+        if not isinstance(access_key_id, str):
+            raise ValueError("access_key_id must be a string")
+        normalized["access_key_id"] = access_key_id
+
+    if "secret_access_key" in mount:
+        secret_access_key = mount.get("secret_access_key")
+        if not isinstance(secret_access_key, str):
+            raise ValueError("secret_access_key must be a string")
+        normalized["secret_access_key"] = secret_access_key
+
+    if not normalized:
+        raise ValueError("mount update must include at least one field")
+
+    return ObjectStorageMountUpdateDict(**normalized)
+
+
+@dataclass(slots=True)
+class ObjectStorageMount:
+    """Non-secret object storage mount metadata returned by the API."""
+
+    id: str
+    type: str
+    bucket: str
+    mount_path: str
+    prefix: str | None = None
+    read_only: bool = False
+
+    @classmethod
+    def from_dict(cls, data: ObjectStorageMountDict) -> ObjectStorageMount:
+        mount_id = data.get("id")
+        if not isinstance(mount_id, str) or not mount_id.strip():
+            raise ValueError(f"ObjectStorageMount response missing required non-empty string 'id', got: {mount_id!r}")
+        return cls(
+            id=mount_id,
+            type=str(data.get("type", "")),
+            bucket=str(data.get("bucket", "")),
+            mount_path=str(data.get("mount_path", "")),
+            prefix=data.get("prefix") if isinstance(data.get("prefix"), str) else None,
+            read_only=bool(data.get("read_only", False)),
+        )
+
 class CreateSandboxParams(BaseModel):
     """Validated sandbox creation parameters."""
     model_config = ConfigDict(extra="forbid")
@@ -116,6 +270,7 @@ class CreateSandboxParams(BaseModel):
     otel_export: bool = False
     env_vars: dict[str, str] | None = None
     network_policy: NetworkPolicyDict | None = None
+    mounts: list[ObjectStorageMountRequestDict] | None = None
 
     @model_validator(mode="after")
     def _validate_values(self) -> CreateSandboxParams:
@@ -131,6 +286,7 @@ class CreateSandboxParams(BaseModel):
         if not 1 <= self.timeout <= 28800:
             raise ValueError("timeout must be between 1 and 28800")
         self.network_policy = _validate_network_policy(self.network_policy)
+        self.mounts = _validate_object_storage_mounts(self.mounts)
         self.template_name = template_name
         return self
 
@@ -179,6 +335,7 @@ class Sandbox(SandboxHandle):
     auto_pause: bool = False
     created_at: str = ""
     network_policy: NetworkPolicyDict | None = None
+    mounts: list[ObjectStorageMount] | None = None
 
     @classmethod
     def from_dict(cls, data: SandboxCreateResponseDict) -> Sandbox:
@@ -198,6 +355,7 @@ class Sandbox(SandboxHandle):
             auto_pause=bool(data.get("auto_pause", False)),
             created_at=data.get("created_at", ""),
             network_policy=data.get("network_policy"),
+            mounts=[ObjectStorageMount.from_dict(mount) for mount in data.get("mounts", [])],
         )
 
 @dataclass(slots=True)
@@ -212,6 +370,7 @@ class SandboxStatus(SandboxHandle):
     state: SandboxState | str
     auto_pause: bool
     created_at: str
+    mounts: list[ObjectStorageMount] | None = None
 
     @classmethod
     def from_dict(cls, data: SandboxStatusResponseDict) -> SandboxStatus:
@@ -223,6 +382,7 @@ class SandboxStatus(SandboxHandle):
         return cls(
             id=sandbox_id,
             template_id=data.get("template_id", ""),
+            mounts=[ObjectStorageMount.from_dict(mount) for mount in data.get("mounts", [])],
             vcpu=int(data.get("vcpu", 0)),
             memory=int(data.get("memory", 0)),
             disk=int(data.get("disk", 0)),

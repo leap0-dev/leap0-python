@@ -16,14 +16,16 @@ from ..models.config import (
 from ..models.sandbox import (
     CreatePresignedURLParams,
     CreateSandboxParams,
+    ObjectStorageMount,
     PresignedURL,
     Sandbox as SandboxData,
     SandboxListResponse,
     SandboxRef,
     SandboxStatus,
+    _validate_object_storage_mount_update,
     sandbox_id_of,
 )
-from .._schemas.sandbox import ListSandboxesResponseDict, NetworkPolicyDict, PresignedURLResponseDict, SandboxCreateResponseDict, SandboxStatusResponseDict
+from .._schemas.sandbox import ListSandboxesResponseDict, NetworkPolicyDict, ObjectStorageMountDict, ObjectStorageMountRequestDict, ObjectStorageMountUpdateDict, PresignedURLResponseDict, SandboxCreateResponseDict, SandboxStatusResponseDict
 from .._utils.errors import intercept_errors
 from .._utils.url import ensure_leading_slash, sandbox_base_url, websocket_url_from_http
 from ._transport import AsyncTransport
@@ -183,6 +185,27 @@ class AsyncSandbox(SandboxHandle):
         """Fetch the configured working directory for the sandbox."""
         return await self._client.sandboxes.get_workdir(self, http_timeout=http_timeout)
 
+    async def add_mount(
+        self,
+        mount: ObjectStorageMountRequestDict,
+        http_timeout: float | None = None,
+    ) -> ObjectStorageMount:
+        """Attach an object storage mount to this sandbox."""
+        return await self._client.sandboxes.add_mount(self, mount, http_timeout=http_timeout)
+
+    async def update_mount(
+        self,
+        mount_id: str,
+        mount: ObjectStorageMountUpdateDict,
+        http_timeout: float | None = None,
+    ) -> ObjectStorageMount:
+        """Update an existing object storage mount on this sandbox."""
+        return await self._client.sandboxes.update_mount(self, mount_id, mount, http_timeout=http_timeout)
+
+    async def delete_mount(self, mount_id: str, http_timeout: float | None = None) -> None:
+        """Delete an object storage mount from this sandbox."""
+        await self._client.sandboxes.delete_mount(self, mount_id, http_timeout=http_timeout)
+
 
 def _inject_otel_env(env_vars: dict[str, str] | None) -> dict[str, str] | None:
     endpoint = os.environ.get(OTEL_EXPORTER_OTLP_ENDPOINT_ENV)
@@ -237,6 +260,7 @@ class AsyncSandboxesClient(Generic[AsyncSandboxT]):
         otel_export: bool = False,
         env_vars: dict[str, str] | None = None,
         network_policy: NetworkPolicyDict | None = None,
+        mounts: list[ObjectStorageMountRequestDict] | None = None,
         http_timeout: float | None = None,
     ) -> AsyncSandboxT | SandboxData | SandboxStatus:
         """Create a new sandbox from a template.
@@ -252,6 +276,7 @@ class AsyncSandboxesClient(Generic[AsyncSandboxT]):
                 also forwards ``OTEL_EXPORTER_OTLP_HEADERS`` when present.
             env_vars: Environment variables to set inside the sandbox.
             network_policy: Outbound network policy for the sandbox.
+            mounts: Object storage mounts to attach before boot.
             http_timeout: Optional HTTP request timeout in seconds for this SDK call.
 
         Returns:
@@ -266,6 +291,7 @@ class AsyncSandboxesClient(Generic[AsyncSandboxT]):
             otel_export=otel_export,
             env_vars=_inject_otel_env(env_vars) if otel_export else env_vars,
             network_policy=network_policy,
+            mounts=mounts,
         )
         payload = params.to_payload()
         payload.pop("otel_export", None)
@@ -449,6 +475,56 @@ class AsyncSandboxesClient(Generic[AsyncSandboxT]):
         await self._transport.request(
             "DELETE",
             f"/v1/sandbox/{sandbox_id_of(sandbox)}/presigned-url/{id_value}",
+            expected_status=204,
+            timeout=http_timeout,
+        )
+
+    @intercept_errors("Failed to add sandbox mount: ")
+    async def add_mount(
+        self,
+        sandbox: SandboxRef,
+        mount: ObjectStorageMountRequestDict,
+        http_timeout: float | None = None,
+    ) -> ObjectStorageMount:
+        normalized_mounts = CreateSandboxParams(mounts=[mount]).mounts
+        if normalized_mounts is None:
+            raise ValueError("mount is required")
+        data = cast(dict[str, object], await self._transport.request_json(
+            "POST",
+            f"/v1/sandbox/{sandbox_id_of(sandbox)}/mounts",
+            json=normalized_mounts[0],
+            expected_status=201,
+            timeout=http_timeout,
+        ))
+        return ObjectStorageMount.from_dict(cast(ObjectStorageMountDict, data))
+
+    @intercept_errors("Failed to update sandbox mount: ")
+    async def update_mount(
+        self,
+        sandbox: SandboxRef,
+        mount_id: str,
+        mount: ObjectStorageMountUpdateDict,
+        http_timeout: float | None = None,
+    ) -> ObjectStorageMount:
+        mount_id_value = mount_id.strip()
+        if not mount_id_value:
+            raise ValueError("mount_id must be a non-empty string")
+        data = cast(dict[str, object], await self._transport.request_json(
+            "PATCH",
+            f"/v1/sandbox/{sandbox_id_of(sandbox)}/mounts/{mount_id_value}",
+            json=_validate_object_storage_mount_update(mount),
+            timeout=http_timeout,
+        ))
+        return ObjectStorageMount.from_dict(cast(ObjectStorageMountDict, data))
+
+    @intercept_errors("Failed to delete sandbox mount: ")
+    async def delete_mount(self, sandbox: SandboxRef, mount_id: str, http_timeout: float | None = None) -> None:
+        mount_id_value = mount_id.strip()
+        if not mount_id_value:
+            raise ValueError("mount_id must be a non-empty string")
+        await self._transport.request(
+            "DELETE",
+            f"/v1/sandbox/{sandbox_id_of(sandbox)}/mounts/{mount_id_value}",
             expected_status=204,
             timeout=http_timeout,
         )
