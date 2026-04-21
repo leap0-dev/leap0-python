@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from leap0.models.sandbox import CreatePresignedURLParams, CreateSandboxParams, PresignedURL, Sandbox, SandboxStatus, _validate_network_policy, sandbox_id_of
+from leap0.models.sandbox import CreatePresignedURLParams, CreateSandboxParams, ObjectStorageMount, PresignedURL, Sandbox, SandboxStatus, _validate_network_policy, _validate_object_storage_mount_update, sandbox_id_of
 
 
 class TestSandboxIdOf:
@@ -29,12 +29,14 @@ class TestSandboxIdOf:
 class TestSandbox:
     def test_full_dict(self):
         s = Sandbox.from_dict({"id": "sbx-1", "template_id": "tpl-1", "vcpu": 2, "memory": 2048,
-                               "disk": 10240, "timeout": 300, "state": "running", "auto_pause": True,
-                               "created_at": "2025-01-01", "network_policy": {"mode": "allow-all"}})
+                                "disk": 10240, "timeout": 300, "state": "running", "auto_pause": True,
+                               "created_at": "2025-01-01", "network_policy": {"mode": "allow-all"},
+                               "mounts": [{"id": "mnt-1", "type": "object-storage", "bucket": "project-assets", "mount_path": "/data/assets", "prefix": "docs/", "read_only": True}]})
         assert s.id == "sbx-1"
         assert s.vcpu == 2
         assert s.state == "running"
         assert s.network_policy == {"mode": "allow-all"}
+        assert s.mounts == [ObjectStorageMount(id="mnt-1", type="object-storage", bucket="project-assets", mount_path="/data/assets", prefix="docs/", read_only=True)]
 
     def test_minimal_dict(self):
         s = Sandbox.from_dict({"id": "sbx-2"})
@@ -46,9 +48,11 @@ class TestSandbox:
 class TestSandboxStatus:
     def test_full_dict(self):
         s = SandboxStatus.from_dict({"id": "sbx-1", "template_id": "tpl-1", "vcpu": 4, "memory": 4096,
-                                     "disk": 10240, "timeout": 300, "state": "paused", "auto_pause": True, "created_at": "2025-01-01"})
+                                     "disk": 10240, "timeout": 300, "state": "paused", "auto_pause": True, "created_at": "2025-01-01",
+                                     "mounts": [{"id": "mnt-1", "type": "object-storage", "bucket": "project-assets", "mount_path": "/data/assets", "prefix": "docs/", "read_only": True}]})
         assert s.state == "paused"
         assert s.vcpu == 4
+        assert s.mounts == [ObjectStorageMount(id="mnt-1", type="object-storage", bucket="project-assets", mount_path="/data/assets", prefix="docs/", read_only=True)]
 
     def test_empty_dict_raises(self):
         with pytest.raises(ValueError, match="missing required non-empty string 'id'"):
@@ -56,6 +60,40 @@ class TestSandboxStatus:
 
 
 class TestCreateSandboxParams:
+    def test_accepts_object_storage_mounts(self):
+        params = CreateSandboxParams(mounts=[{
+            "type": "object-storage",
+            "bucket": "project-assets",
+            "mount_path": "/data/assets",
+            "endpoint": "https://storage.example.com",
+            "prefix": "docs/",
+        }])
+
+        assert params.mounts == [{
+            "type": "object-storage",
+            "bucket": "project-assets",
+            "mount_path": "/data/assets",
+            "endpoint": "https://storage.example.com",
+            "prefix": "docs/",
+        }]
+
+    def test_rejects_invalid_mounts(self):
+        with pytest.raises(ValueError, match=r"mounts\[0\]\.type"):
+            CreateSandboxParams(mounts=[{"type": "other", "bucket": "b", "mount_path": "/data", "endpoint": "https://storage.example.com"}])
+
+        with pytest.raises(ValueError, match=r"mounts\[0\]\.prefix"):
+            CreateSandboxParams(mounts=[{"type": "object-storage", "bucket": "b", "mount_path": "/data", "endpoint": "https://storage.example.com", "prefix": "/bad"}])
+
+        with pytest.raises(ValueError, match=r"mounts\[1\]\.mount_path must be unique"):
+            CreateSandboxParams(mounts=[
+                {"type": "object-storage", "bucket": "a", "mount_path": "/data", "endpoint": "https://storage-a.example.com"},
+                {"type": "object-storage", "bucket": "b", "mount_path": "/data", "endpoint": "https://storage-b.example.com"},
+            ])
+
+    def test_rejects_empty_mount_update(self):
+        with pytest.raises(ValueError, match="at least one field"):
+            _validate_object_storage_mount_update({})
+
     def test_rejects_invalid_network_policy(self):
         with pytest.raises(ValueError, match=r"network_policy\.mode"):
             CreateSandboxParams(network_policy={"mode": "nope"})

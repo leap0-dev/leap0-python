@@ -19,10 +19,41 @@ class NetworkPolicyDict(TypedDict, total=False):
     allow_cidrs: NotRequired[list[str]]
     transforms: NotRequired[list[TransformRuleDict]]
 
-class SandboxCreateResponseDict(TypedDict):
+class ObjectStorageMountRequestDict(TypedDict, total=False):
+    """Wire schema for object storage mount requests."""
+    type: Required[str]
+    bucket: Required[str]
+    mount_path: Required[str]
+    endpoint: Required[str]
+    prefix: str
+    read_only: bool
+    access_key_id: str
+    secret_access_key: str
+
+class ObjectStorageMountUpdateDict(TypedDict, total=False):
+    """Wire schema for sandbox mount update requests."""
+    bucket: str
+    mount_path: str
+    endpoint: str
+    prefix: str
+    read_only: bool
+    access_key_id: str
+    secret_access_key: str
+
+class ObjectStorageMountDict(TypedDict, total=False):
+    """Wire schema for object storage mounts returned by the API."""
+    id: Required[str]
+    type: Required[str]
+    bucket: Required[str]
+    mount_path: Required[str]
+    prefix: str
+    read_only: bool
+
+class SandboxCreateResponseDict(TypedDict, total=False):
     """Wire schema for sandbox creation responses."""
-    id: str
+    id: Required[str]
     template_id: str
+    mounts: list[ObjectStorageMountDict]
     vcpu: int
     memory: int
     disk: int
@@ -32,10 +63,11 @@ class SandboxCreateResponseDict(TypedDict):
     created_at: str
     network_policy: NetworkPolicyDict | None
 
-class SandboxStatusResponseDict(TypedDict):
+class SandboxStatusResponseDict(TypedDict, total=False):
     """Wire schema for sandbox status responses."""
-    id: str
+    id: Required[str]
     template_id: str
+    mounts: list[ObjectStorageMountDict]
     vcpu: int
     memory: int
     disk: int
