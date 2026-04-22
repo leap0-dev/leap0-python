@@ -344,17 +344,19 @@ class TestAsyncSandbox:
                 sandboxes=sandboxes,
             )
             calls: list[tuple[object, str | None, bool, float | None]] = []
+            sentinel = object()
 
             async def create_snapshot(sandbox: object, *, name: str | None = None, kill_sandbox_after: bool = False, http_timeout: float | None = None):
                 calls.append((sandbox, name, kill_sandbox_after, http_timeout))
-                return None
+                return sentinel
 
             sandboxes.create_snapshot = create_snapshot
             sandbox = AsyncSandbox(fake_client, Sandbox(id="sbx-1", state="running"))
 
-            await sandbox.create_snapshot(name="snap-a", kill_sandbox_after=True, http_timeout=1.5)
+            result = await sandbox.create_snapshot(name="snap-a", kill_sandbox_after=True, http_timeout=1.5)
 
             assert calls == [(sandbox, "snap-a", True, 1.5)]
+            assert result is sentinel
 
         asyncio.run(run())
 
