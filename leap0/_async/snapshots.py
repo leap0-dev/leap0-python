@@ -89,10 +89,6 @@ class AsyncSnapshotsClient(Generic[AsyncSnapshotSandboxT]):
             auto_pause: Automatically pause the restored sandbox on timeout.
             timeout: Sandbox timeout in seconds.
             network_policy: Override the network policy from the snapshot.
-
-            http_timeout: Optional HTTP request timeout in seconds for this SDK call.
-
-        Args:
             http_timeout: Optional HTTP request timeout in seconds for this SDK call.
 
         Returns:

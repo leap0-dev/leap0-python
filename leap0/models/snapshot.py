@@ -31,9 +31,7 @@ class RestoreSnapshotParams(BaseModel):
 
     def to_payload(self) -> dict[str, object]:
         """Convert this object to an API request payload."""
-        payload = self.model_dump(exclude_none=True)
-        payload["snapshot_name"] = self.snapshot_name
-        return payload
+        return self.model_dump(exclude_none=True)
 
 
 RestoreSnapshotParams.model_rebuild(_types_namespace={"NetworkPolicyMode": NetworkPolicyMode})

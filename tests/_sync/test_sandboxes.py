@@ -433,8 +433,10 @@ class TestRichSandbox:
             sandboxes=sandboxes,
         )
         sandbox = RichSandbox(client, Sandbox(id="sbx-1", state="running"))
+        sentinel = object()
+        sandboxes.create_snapshot.return_value = sentinel
 
-        sandbox.create_snapshot(name="snap-a", kill_sandbox_after=True, http_timeout=1.5)
+        result = sandbox.create_snapshot(name="snap-a", kill_sandbox_after=True, http_timeout=1.5)
 
         sandboxes.create_snapshot.assert_called_once_with(
             sandbox,
@@ -442,6 +444,7 @@ class TestRichSandbox:
             kill_sandbox_after=True,
             http_timeout=1.5,
         )
+        assert result is sentinel
 
     def test_presigned_url_helpers_delegate_to_sandboxes_client(self):
         sandboxes = MagicMock()

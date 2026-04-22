@@ -135,7 +135,7 @@ class AsyncSandbox(SandboxHandle):
         name: str | None = None,
         kill_sandbox_after: bool = False,
         http_timeout: float | None = None,
-    ):
+    ) -> Snapshot:
         """Create a snapshot from this sandbox.
 
         Args:
