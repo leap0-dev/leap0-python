@@ -8,31 +8,8 @@ from pydantic import BaseModel, ConfigDict, model_validator
 from .._schemas.snapshot import ListSnapshotsResponseDict, SnapshotCreateResponseDict
 from .sandbox import NetworkPolicyDict, NetworkPolicyMode, SandboxState, _parse_sandbox_state
 
-class CreateSnapshotParams(BaseModel):
-    """Validated snapshot creation parameters."""
-    model_config = ConfigDict(extra="forbid")
-
-    name: str | None = None
-
-    @model_validator(mode="after")
-    def _validate_name(self) -> CreateSnapshotParams:
-        if self.name is not None:
-            name = self.name.strip()
-            if not name:
-                raise ValueError("name must be a non-empty string when provided")
-            if len(name) > 64:
-                raise ValueError("name must be at most 64 characters")
-            self.name = name
-        return self
-
-    def to_payload(self) -> dict[str, str]:
-        """Convert this object to an API request payload."""
-        if self.name is None:
-            return {}
-        return {"name": self.name}
-
-class ResumeSnapshotParams(BaseModel):
-    """Validated snapshot resume parameters."""
+class RestoreSnapshotParams(BaseModel):
+    """Validated snapshot restore parameters."""
     model_config = ConfigDict(extra="forbid")
 
     snapshot_name: str
@@ -41,7 +18,7 @@ class ResumeSnapshotParams(BaseModel):
     network_policy: NetworkPolicyDict | None = None
 
     @model_validator(mode="after")
-    def _validate_values(self) -> ResumeSnapshotParams:
+    def _validate_values(self) -> RestoreSnapshotParams:
         snapshot_name = self.snapshot_name.strip()
         if not snapshot_name:
             raise ValueError("snapshot_name must be a non-empty string")
@@ -59,8 +36,7 @@ class ResumeSnapshotParams(BaseModel):
         return payload
 
 
-CreateSnapshotParams.model_rebuild(_types_namespace={"NetworkPolicyMode": NetworkPolicyMode})
-ResumeSnapshotParams.model_rebuild(_types_namespace={"NetworkPolicyMode": NetworkPolicyMode})
+RestoreSnapshotParams.model_rebuild(_types_namespace={"NetworkPolicyMode": NetworkPolicyMode})
 
 @dataclass(slots=True)
 class Snapshot:

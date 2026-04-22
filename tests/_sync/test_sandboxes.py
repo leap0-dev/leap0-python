@@ -53,6 +53,23 @@ class TestSandboxesClient:
         assert result.mounts is not None
         assert result.mounts[0].id == "mnt-1"
 
+    def test_create_snapshot(self, mock_transport):
+        mock_transport.request_json.return_value = {
+            "id": "snap-1", "name": "snap-a", "template_id": "tpl-1",
+            "vcpu": 2, "memory": 1024, "disk": 4096, "created_at": "",
+        }
+
+        result = SandboxesClient(mock_transport, sandbox_domain="s.dev").create_snapshot(
+            "sbx-1",
+            name="snap-a",
+            kill_sandbox_after=True,
+        )
+
+        args, kwargs = mock_transport.request_json.call_args
+        assert args == ("POST", "/v1/sandbox/sbx-1/snapshot/create")
+        assert kwargs["json"] == {"name": "snap-a", "kill_sandbox_after": True}
+        assert result.id == "snap-1"
+
     def test_list(self, mock_transport):
         mock_transport.request_json.return_value = {
             "items": [{
@@ -401,6 +418,30 @@ class TestRichSandbox:
 
         sandboxes.pause.assert_called_once_with(sandbox, http_timeout=7.5)
         assert sandbox.state == "paused"
+
+    def test_create_snapshot_delegates_to_sandboxes_client(self):
+        sandboxes = MagicMock()
+        client = SimpleNamespace(
+            _filesystem=MagicMock(),
+            _git=MagicMock(),
+            _process=MagicMock(),
+            _pty=MagicMock(),
+            _lsp=MagicMock(),
+            _ssh=MagicMock(),
+            _code_interpreter=MagicMock(),
+            _desktop=MagicMock(),
+            sandboxes=sandboxes,
+        )
+        sandbox = RichSandbox(client, Sandbox(id="sbx-1", state="running"))
+
+        sandbox.create_snapshot(name="snap-a", kill_sandbox_after=True, http_timeout=1.5)
+
+        sandboxes.create_snapshot.assert_called_once_with(
+            sandbox,
+            name="snap-a",
+            kill_sandbox_after=True,
+            http_timeout=1.5,
+        )
 
     def test_presigned_url_helpers_delegate_to_sandboxes_client(self):
         sandboxes = MagicMock()

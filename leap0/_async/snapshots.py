@@ -3,9 +3,9 @@ from __future__ import annotations
 from typing import Generic, TypeVar, cast
 
 from .._internal.types import SandboxFactory
-from ..models.sandbox import Sandbox, SandboxRef, sandbox_id_of
-from ..models.snapshot import CreateSnapshotParams, ResumeSnapshotParams, Snapshot, SnapshotListResponse, SnapshotRef, snapshot_id_of
-from .._schemas.snapshot import ListSnapshotsResponseDict, SnapshotCreateResponseDict
+from ..models.sandbox import Sandbox
+from ..models.snapshot import RestoreSnapshotParams, Snapshot, SnapshotListResponse, SnapshotRef, snapshot_id_of
+from .._schemas.snapshot import ListSnapshotsResponseDict
 from .._schemas.sandbox import NetworkPolicyDict, SandboxCreateResponseDict
 from .._utils.errors import intercept_errors
 from ._transport import AsyncTransport
@@ -14,7 +14,7 @@ AsyncSnapshotSandboxT = TypeVar("AsyncSnapshotSandboxT")
 
 
 class AsyncSnapshotsClient(Generic[AsyncSnapshotSandboxT]):
-    """Create, resume, and delete sandbox snapshots.
+    """List, restore, and delete sandbox snapshots.
     
         A snapshot captures the full state of a running sandbox so it can be
         restored later.
@@ -72,75 +72,8 @@ class AsyncSnapshotsClient(Generic[AsyncSnapshotSandboxT]):
         ))
         return SnapshotListResponse.from_dict(data)
 
-    @intercept_errors("Failed to create snapshot: ")
-    async def create(
-        self,
-        sandbox: SandboxRef,
-        *,
-        name: str | None = None,
-        http_timeout: float | None = None,
-    ) -> Snapshot:
-        """Create a snapshot of a running sandbox without stopping it.
-
-        Args:
-            sandbox: Sandbox ID or object to snapshot.
-            name: Optional snapshot name. Auto-generated if omitted.
-
-            http_timeout: Optional HTTP request timeout in seconds for this SDK call.
-
-        Args:
-            sandbox: Sandbox ID or object to pause.
-            name: Optional snapshot name. Auto-generated if omitted.
-
-            http_timeout: Optional HTTP request timeout in seconds for this SDK call.
-        Returns:
-            Snapshot: Created snapshot metadata.
-
-        Returns:
-            Snapshot: Snapshot metadata including ID and optional name.
-        """
-        payload = CreateSnapshotParams(name=name).to_payload()
-        data = cast(SnapshotCreateResponseDict, await self._transport.request_json(
-            "POST",
-            f"/v1/sandbox/{sandbox_id_of(sandbox)}/snapshot/create",
-            json=payload,
-            expected_status=201,
-            timeout=http_timeout,
-        ))
-        return Snapshot.from_dict(data)
-
-    @intercept_errors("Failed to pause sandbox: ")
-    async def pause(
-        self,
-        sandbox: SandboxRef,
-        *,
-        name: str | None = None,
-        http_timeout: float | None = None,
-    ) -> Snapshot:
-        """Pause a running sandbox and create a snapshot in one step.
-        
-                The sandbox is stopped after the snapshot is taken.
-        
-        Args:
-            sandbox: Sandbox ID or object.
-            name: Name used by this operation.
-            http_timeout: Optional HTTP request timeout in seconds for this SDK call.
-        
-        Returns:
-            object: Result returned by this operation.
-        """
-        payload = CreateSnapshotParams(name=name).to_payload()
-        data = cast(SnapshotCreateResponseDict, await self._transport.request_json(
-            "POST",
-            f"/v1/sandbox/{sandbox_id_of(sandbox)}/snapshot/pause",
-            json=payload,
-            expected_status=201,
-            timeout=http_timeout,
-        ))
-        return Snapshot.from_dict(data)
-
-    @intercept_errors("Failed to resume snapshot: ")
-    async def resume(
+    @intercept_errors("Failed to restore snapshot: ")
+    async def restore(
         self,
         *,
         snapshot_name: str,
@@ -163,9 +96,9 @@ class AsyncSnapshotsClient(Generic[AsyncSnapshotSandboxT]):
             http_timeout: Optional HTTP request timeout in seconds for this SDK call.
 
         Returns:
-            Sandbox: Newly resumed sandbox.
+            Sandbox: Newly restored sandbox.
         """
-        payload = ResumeSnapshotParams(
+        payload = RestoreSnapshotParams(
             snapshot_name=snapshot_name,
             auto_pause=auto_pause,
             timeout=timeout,
@@ -173,7 +106,7 @@ class AsyncSnapshotsClient(Generic[AsyncSnapshotSandboxT]):
         ).to_payload()
         data = cast(SandboxCreateResponseDict, await self._transport.request_json(
             "POST",
-            "/v1/snapshot/resume",
+            "/v1/snapshot/restore",
             json=payload,
             expected_status=201,
             timeout=http_timeout,

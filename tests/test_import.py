@@ -36,7 +36,7 @@ from leap0 import (
     ProcessClient,
     PtyClient,
     RenameTemplateParams,
-    ResumeSnapshotParams,
+    RestoreSnapshotParams,
     Sandbox,
     SandboxListItem,
     SandboxListResponse,
@@ -91,7 +91,7 @@ def test_service_client_imports() -> None:
     assert AzureRegistryCredentialsDict is not None
     assert CreateSandboxParams is not None
     assert CreateSnapshotParams is not None
-    assert ResumeSnapshotParams is not None
+    assert RestoreSnapshotParams is not None
     assert CreateTemplateParams is not None
     assert RenameTemplateParams is not None
     assert CreatePtySessionParams is not None

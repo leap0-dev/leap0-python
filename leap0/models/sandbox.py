@@ -27,6 +27,34 @@ from .._schemas.sandbox import (
 )
 from .config import DEFAULT_MEMORY_MIB, DEFAULT_TEMPLATE_NAME, DEFAULT_TIMEOUT, DEFAULT_VCPU
 
+
+class CreateSnapshotParams(BaseModel):
+    """Validated snapshot creation parameters for sandbox snapshots."""
+    model_config = ConfigDict(extra="forbid")
+
+    name: str | None = None
+    kill_sandbox_after: bool = False
+
+    @model_validator(mode="after")
+    def _validate_name(self) -> CreateSnapshotParams:
+        if self.name is not None:
+            name = self.name.strip()
+            if not name:
+                raise ValueError("name must be a non-empty string when provided")
+            if len(name) > 64:
+                raise ValueError("name must be at most 64 characters")
+            self.name = name
+        return self
+
+    def to_payload(self) -> dict[str, str | bool]:
+        """Convert this object to an API request payload."""
+        payload: dict[str, str | bool] = {}
+        if self.name is not None:
+            payload["name"] = self.name
+        if self.kill_sandbox_after:
+            payload["kill_sandbox_after"] = True
+        return payload
+
 class SandboxState(str, Enum):
     """Lifecycle states for a sandbox."""
     STARTING = "starting"
