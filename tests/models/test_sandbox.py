@@ -43,6 +43,7 @@ class TestSandbox:
         assert s.id == "sbx-2"
         assert s.state == "starting"
         assert s.network_policy is None
+        assert s.mounts is None
 
 
 class TestSandboxStatus:
@@ -57,6 +58,12 @@ class TestSandboxStatus:
     def test_empty_dict_raises(self):
         with pytest.raises(ValueError, match="missing required non-empty string 'id'"):
             SandboxStatus.from_dict({})
+
+    def test_absent_mounts_preserved_as_none(self):
+        s = SandboxStatus.from_dict({"id": "sbx-2", "template_id": "tpl-1", "vcpu": 1,
+                                     "memory": 512, "disk": 10240, "timeout": 300,
+                                     "state": "running", "auto_pause": False, "created_at": "2025-01-01"})
+        assert s.mounts is None
 
 
 class TestCreateSandboxParams:
@@ -77,9 +84,34 @@ class TestCreateSandboxParams:
             "prefix": "docs/",
         }]
 
+    def test_preserves_empty_mount_credentials(self):
+        params = CreateSandboxParams(mounts=[{
+            "type": "object-storage",
+            "bucket": "project-assets",
+            "mount_path": "/data/assets",
+            "endpoint": "https://storage.example.com",
+            "access_key_id": "",
+            "secret_access_key": "",
+        }])
+
+        assert params.mounts == [{
+            "type": "object-storage",
+            "bucket": "project-assets",
+            "mount_path": "/data/assets",
+            "endpoint": "https://storage.example.com",
+            "access_key_id": "",
+            "secret_access_key": "",
+        }]
+
     def test_rejects_invalid_mounts(self):
         with pytest.raises(ValueError, match=r"mounts\[0\]\.type"):
             CreateSandboxParams(mounts=[{"type": "other", "bucket": "b", "mount_path": "/data", "endpoint": "https://storage.example.com"}])
+
+        with pytest.raises(ValueError, match=r"mounts\[0\]\.endpoint must be a valid URL"):
+            CreateSandboxParams(mounts=[{"type": "object-storage", "bucket": "b", "mount_path": "/data", "endpoint": "not-a-url"}])
+
+        with pytest.raises(ValueError, match=r"mounts\[0\]\.prefix must be relative, must not contain '\.\.', and must end with '/'"):
+            CreateSandboxParams(mounts=[{"type": "object-storage", "bucket": "b", "mount_path": "/data", "endpoint": "https://storage.example.com", "prefix": ""}])
 
         with pytest.raises(ValueError, match=r"mounts\[0\]\.prefix"):
             CreateSandboxParams(mounts=[{"type": "object-storage", "bucket": "b", "mount_path": "/data", "endpoint": "https://storage.example.com", "prefix": "/bad"}])
@@ -93,6 +125,14 @@ class TestCreateSandboxParams:
     def test_rejects_empty_mount_update(self):
         with pytest.raises(ValueError, match="at least one field"):
             _validate_object_storage_mount_update({})
+
+    def test_rejects_invalid_mount_update_endpoint(self):
+        with pytest.raises(ValueError, match="endpoint must be a valid URL"):
+            _validate_object_storage_mount_update({"endpoint": "not-a-url"})
+
+    def test_rejects_empty_mount_update_prefix(self):
+        with pytest.raises(ValueError, match=r"prefix must be relative, must not contain '\.\.', and must end with '/'"):
+            _validate_object_storage_mount_update({"prefix": ""})
 
     def test_rejects_invalid_network_policy(self):
         with pytest.raises(ValueError, match=r"network_policy\.mode"):
