@@ -6,6 +6,7 @@ from enum import Enum
 import ipaddress
 import re
 from typing import TypeAlias
+from urllib.parse import urlparse
 
 from pydantic import BaseModel, ConfigDict, model_validator
 
@@ -108,6 +109,13 @@ def _validate_network_policy(policy: NetworkPolicyDict | None) -> NetworkPolicyD
     return policy
 
 
+def _validate_url(value: str) -> str:
+    parsed = urlparse(value)
+    if not parsed.scheme or not parsed.netloc:
+        raise ValueError("endpoint must be a valid URL")
+    return value
+
+
 def _validate_object_storage_mounts(
     mounts: list[ObjectStorageMountRequestDict] | None,
 ) -> list[ObjectStorageMountRequestDict] | None:
@@ -139,13 +147,17 @@ def _validate_object_storage_mounts(
 
         endpoint = mount.get("endpoint")
         if not isinstance(endpoint, str) or not endpoint.strip():
-            raise ValueError(f"mounts[{index}].endpoint must be a non-empty string")
+            raise ValueError(f"mounts[{index}].endpoint must be a valid URL")
+        try:
+            endpoint = _validate_url(endpoint.strip())
+        except ValueError as err:
+            raise ValueError(f"mounts[{index}].{err}") from err
 
         prefix = mount.get("prefix")
         if prefix is not None:
             if not isinstance(prefix, str):
                 raise ValueError(f"mounts[{index}].prefix must be a string")
-            if prefix and (prefix.startswith("/") or not prefix.endswith("/") or ".." in prefix):
+            if prefix == "" or prefix.startswith("/") or not prefix.endswith("/") or ".." in prefix:
                 raise ValueError(
                     f"mounts[{index}].prefix must be relative, must not contain '..', and must end with '/'")
 
@@ -165,11 +177,11 @@ def _validate_object_storage_mounts(
             type="object-storage",
             bucket=bucket.strip(),
             mount_path=mount_path,
-            endpoint=endpoint.strip(),
+            endpoint=endpoint,
             **({"prefix": prefix} if isinstance(prefix, str) and prefix != "" else {}),
             **({"read_only": read_only} if isinstance(read_only, bool) else {}),
-            **({"access_key_id": access_key_id} if isinstance(access_key_id, str) and access_key_id != "" else {}),
-            **({"secret_access_key": secret_access_key} if isinstance(secret_access_key, str) and secret_access_key != "" else {}),
+            **({"access_key_id": access_key_id} if isinstance(access_key_id, str) else {}),
+            **({"secret_access_key": secret_access_key} if isinstance(secret_access_key, str) else {}),
         ))
 
     return normalized
@@ -198,14 +210,14 @@ def _validate_object_storage_mount_update(
     if "endpoint" in mount:
         endpoint = mount.get("endpoint")
         if not isinstance(endpoint, str) or not endpoint.strip():
-            raise ValueError("endpoint must be a non-empty string")
-        normalized["endpoint"] = endpoint.strip()
+            raise ValueError("endpoint must be a valid URL")
+        normalized["endpoint"] = _validate_url(endpoint.strip())
 
     if "prefix" in mount:
         prefix = mount.get("prefix")
         if not isinstance(prefix, str):
             raise ValueError("prefix must be a string")
-        if prefix and (prefix.startswith("/") or not prefix.endswith("/") or ".." in prefix):
+        if prefix == "" or prefix.startswith("/") or not prefix.endswith("/") or ".." in prefix:
             raise ValueError("prefix must be relative, must not contain '..', and must end with '/'")
         normalized["prefix"] = prefix
 
@@ -344,6 +356,7 @@ class Sandbox(SandboxHandle):
         if not isinstance(sandbox_id, str) or not sandbox_id.strip():
             raise ValueError(f"Sandbox response missing required non-empty string 'id', got: {sandbox_id!r}")
         state = _parse_sandbox_state(data.get("state"))
+        mounts = [ObjectStorageMount.from_dict(mount) for mount in data["mounts"]] if "mounts" in data else None
         return cls(
             id=sandbox_id,
             template_id=data.get("template_id", ""),
@@ -355,7 +368,7 @@ class Sandbox(SandboxHandle):
             auto_pause=bool(data.get("auto_pause", False)),
             created_at=data.get("created_at", ""),
             network_policy=data.get("network_policy"),
-            mounts=[ObjectStorageMount.from_dict(mount) for mount in data.get("mounts", [])],
+            mounts=mounts,
         )
 
 @dataclass(slots=True)
@@ -379,10 +392,11 @@ class SandboxStatus(SandboxHandle):
         if not isinstance(sandbox_id, str) or not sandbox_id.strip():
             raise ValueError(f"SandboxStatus response missing required non-empty string 'id', got: {sandbox_id!r}")
         state = _parse_sandbox_state(data.get("state"))
+        mounts = [ObjectStorageMount.from_dict(mount) for mount in data["mounts"]] if "mounts" in data else None
         return cls(
             id=sandbox_id,
             template_id=data.get("template_id", ""),
-            mounts=[ObjectStorageMount.from_dict(mount) for mount in data.get("mounts", [])],
+            mounts=mounts,
             vcpu=int(data.get("vcpu", 0)),
             memory=int(data.get("memory", 0)),
             disk=int(data.get("disk", 0)),
