@@ -61,6 +61,26 @@ class TestAsyncSandboxesClient:
 
         asyncio.run(run())
 
+    def test_create_snapshot(self, async_mock_transport):
+        async def run() -> None:
+            async_mock_transport.request_json.return_value = {
+                "id": "snap-1", "name": "snap-a", "template_id": "tpl-1",
+                "vcpu": 2, "memory": 1024, "disk": 4096, "created_at": "",
+            }
+
+            result = await AsyncSandboxesClient(async_mock_transport, sandbox_domain="s.dev").create_snapshot(
+                "sbx-1",
+                name="snap-a",
+                kill_sandbox_after=True,
+            )
+
+            args, kwargs = async_mock_transport.request_json.call_args
+            assert args == ("POST", "/v1/sandbox/sbx-1/snapshot/create")
+            assert kwargs["json"] == {"name": "snap-a", "kill_sandbox_after": True}
+            assert result.id == "snap-1"
+
+        asyncio.run(run())
+
     def test_factory_returns_async_sandbox(self, async_mock_transport):
         async def run() -> None:
             fake_client = SimpleNamespace(
@@ -312,6 +332,29 @@ class TestAsyncSandbox:
             await sandbox.pause(http_timeout=2.5)
 
             assert sandbox.state == "paused"
+
+        asyncio.run(run())
+
+    def test_create_snapshot_delegates_to_sandboxes_client(self):
+        async def run() -> None:
+            sandboxes = SimpleNamespace()
+            fake_client = SimpleNamespace(
+                _filesystem=SimpleNamespace(), _git=SimpleNamespace(), _process=SimpleNamespace(), _pty=SimpleNamespace(),
+                _lsp=SimpleNamespace(), _ssh=SimpleNamespace(), _code_interpreter=SimpleNamespace(), _desktop=SimpleNamespace(),
+                sandboxes=sandboxes,
+            )
+            calls: list[tuple[object, str | None, bool, float | None]] = []
+
+            async def create_snapshot(sandbox: object, *, name: str | None = None, kill_sandbox_after: bool = False, http_timeout: float | None = None):
+                calls.append((sandbox, name, kill_sandbox_after, http_timeout))
+                return None
+
+            sandboxes.create_snapshot = create_snapshot
+            sandbox = AsyncSandbox(fake_client, Sandbox(id="sbx-1", state="running"))
+
+            await sandbox.create_snapshot(name="snap-a", kill_sandbox_after=True, http_timeout=1.5)
+
+            assert calls == [(sandbox, "snap-a", True, 1.5)]
 
         asyncio.run(run())
 

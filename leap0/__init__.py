@@ -86,7 +86,8 @@ if TYPE_CHECKING:
         SandboxStatus,
         sandbox_id_of,
     )
-    from .models.snapshot import CreateSnapshotParams, ResumeSnapshotParams, Snapshot, SnapshotListResponse, snapshot_id_of
+    from .models.sandbox import CreateSnapshotParams
+    from .models.snapshot import RestoreSnapshotParams, Snapshot, SnapshotListResponse, snapshot_id_of
     from .models.ssh import SshAccess, SshValidation
     from .models.template import (
         AwsRegistryCredentials,
@@ -205,7 +206,7 @@ __all__ = [
     "RegistryCredentials",
     "RegistryCredentialsDict",
     "RegistryCredentialsInput",
-    "ResumeSnapshotParams",
+    "RestoreSnapshotParams",
     "Sandbox",
     "SandboxListItem",
     "SandboxListResponse",
@@ -280,8 +281,8 @@ _DYNAMIC_IMPORTS: dict[str, tuple[str, str]] = {
     "SandboxStatus": (".models.sandbox", "SandboxStatus"),
     "SandboxState": (".models.sandbox", "SandboxState"),
     "sandbox_id_of": (".models.sandbox", "sandbox_id_of"),
-    "CreateSnapshotParams": (".models.snapshot", "CreateSnapshotParams"),
-    "ResumeSnapshotParams": (".models.snapshot", "ResumeSnapshotParams"),
+    "CreateSnapshotParams": (".models.sandbox", "CreateSnapshotParams"),
+    "RestoreSnapshotParams": (".models.snapshot", "RestoreSnapshotParams"),
     "Snapshot": (".models.snapshot", "Snapshot"),
     "SnapshotListResponse": (".models.snapshot", "SnapshotListResponse"),
     "snapshot_id_of": (".models.snapshot", "snapshot_id_of"),

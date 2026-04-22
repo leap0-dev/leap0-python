@@ -13,6 +13,7 @@ from ..models.config import (
     DEFAULT_VCPU,
 )
 from ..models.sandbox import (
+    CreateSnapshotParams,
     CreatePresignedURLParams,
     CreateSandboxParams,
     ObjectStorageMount,
@@ -24,6 +25,8 @@ from ..models.sandbox import (
     _validate_object_storage_mount_update,
     sandbox_id_of,
 )
+from ..models.snapshot import Snapshot
+from .._schemas.snapshot import SnapshotCreateResponseDict
 from .._schemas.sandbox import ListSandboxesResponseDict, NetworkPolicyDict, ObjectStorageMountDict, ObjectStorageMountRequestDict, ObjectStorageMountUpdateDict, PresignedURLResponseDict, SandboxCreateResponseDict, SandboxStatusResponseDict
 from .._utils.errors import intercept_errors
 from .._utils.url import ensure_leading_slash, sandbox_base_url, websocket_url_from_http
@@ -122,6 +125,30 @@ class Sandbox(SandboxHandle):
         latest = self._client.sandboxes.pause(self, http_timeout=http_timeout)
         self._data = latest._data
         return self
+
+    def create_snapshot(
+        self,
+        *,
+        name: str | None = None,
+        kill_sandbox_after: bool = False,
+        http_timeout: float | None = None,
+    ):
+        """Create a snapshot from this sandbox.
+
+        Args:
+            name: Optional snapshot name. Auto-generated if omitted.
+            kill_sandbox_after: Terminate the source sandbox after the snapshot is stored.
+            http_timeout: Optional HTTP request timeout in seconds for this SDK call.
+
+        Returns:
+            Snapshot: Created snapshot metadata.
+        """
+        return self._client.sandboxes.create_snapshot(
+            self,
+            name=name,
+            kill_sandbox_after=kill_sandbox_after,
+            http_timeout=http_timeout,
+        )
 
     def delete(self, http_timeout: float | None = None) -> None:
         """Delete the sandbox.
@@ -375,6 +402,26 @@ class SandboxesClient(Generic[SandboxT]):
             timeout=http_timeout,
         )
         return self._wrap_sandbox(SandboxData.from_dict(data))
+
+    @intercept_errors("Failed to create snapshot: ")
+    def create_snapshot(
+        self,
+        sandbox: SandboxRef,
+        *,
+        name: str | None = None,
+        kill_sandbox_after: bool = False,
+        http_timeout: float | None = None,
+    ) -> Snapshot:
+        """Create a snapshot from a running sandbox."""
+        payload = CreateSnapshotParams(name=name, kill_sandbox_after=kill_sandbox_after).to_payload()
+        data: SnapshotCreateResponseDict = self._transport.request_json(
+            "POST",
+            f"/v1/sandbox/{sandbox_id_of(sandbox)}/snapshot/create",
+            json=payload,
+            expected_status=201,
+            timeout=http_timeout,
+        )
+        return Snapshot.from_dict(data)
 
     @intercept_errors("Failed to get sandbox: ")
     def get(self, sandbox: SandboxRef, http_timeout: float | None = None) -> SandboxT | SandboxData | SandboxStatus:
