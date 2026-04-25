@@ -58,10 +58,12 @@ class CreateSnapshotParams(BaseModel):
 class SandboxState(str, Enum):
     """Lifecycle states for a sandbox."""
     STARTING = "starting"
+    STOPPING = "stopping"
     SNAPSHOTTING = "snapshotting"
     RUNNING = "running"
     PAUSED = "paused"
     UNPAUSING = "unpausing"
+    STOPPED = "stopped"
     DELETING = "deleting"
     DELETED = "deleted"
 

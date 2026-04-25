@@ -126,6 +126,32 @@ class Sandbox(SandboxHandle):
         self._data = latest._data
         return self
 
+    def stop(self, http_timeout: float | None = None) -> Sandbox:
+        """Stop the sandbox and update this handle with the latest metadata.
+
+        Args:
+            http_timeout: Optional HTTP request timeout in seconds for this SDK call.
+
+        Returns:
+            Sandbox: This sandbox object with updated metadata.
+        """
+        latest = self._client.sandboxes.stop(self, http_timeout=http_timeout)
+        self._data = latest._data
+        return self
+
+    def start(self, http_timeout: float | None = None) -> Sandbox:
+        """Start a previously stopped sandbox and refresh this handle.
+
+        Args:
+            http_timeout: Optional HTTP request timeout in seconds for this SDK call.
+
+        Returns:
+            Sandbox: This sandbox object with updated metadata.
+        """
+        latest = self._client.sandboxes.start(self, http_timeout=http_timeout)
+        self._data = latest._data
+        return self
+
     def create_snapshot(
         self,
         *,
@@ -251,7 +277,7 @@ def _inject_otel_env(env_vars: dict[str, str] | None) -> dict[str, str] | None:
 
 
 class SandboxesClient(Generic[SandboxT]):
-    """Create, inspect, pause, and delete sandboxes.
+    """Create, inspect, pause, stop, start, and delete sandboxes.
 
     Sandboxes are isolated execution environments with their own compute,
     filesystem, and network boundary.
@@ -357,7 +383,7 @@ class SandboxesClient(Generic[SandboxT]):
         Returns:
             SandboxListResponse: Paginated sandbox summaries.
         """
-        valid_states = {"starting", "snapshotting", "running", "paused", "unpausing", "deleting"}
+        valid_states = {"starting", "stopping", "snapshotting", "running", "paused", "unpausing", "stopped", "deleting"}
         if state is not None and state not in valid_states:
             raise ValueError(f"state must be one of {sorted(valid_states)}")
         if sort not in {"created_at", "state"}:
@@ -402,6 +428,41 @@ class SandboxesClient(Generic[SandboxT]):
             timeout=http_timeout,
         )
         return self._wrap_sandbox(SandboxData.from_dict(data))
+
+    @intercept_errors("Failed to stop sandbox: ")
+    def stop(self, sandbox: SandboxRef, http_timeout: float | None = None) -> SandboxT | SandboxData | SandboxStatus:
+        """Stop a running sandbox while preserving writable disk changes.
+
+        Args:
+            sandbox: Sandbox ID or object.
+            http_timeout: Optional HTTP request timeout in seconds for this SDK call.
+
+        Returns:
+            SandboxT | SandboxData | SandboxStatus: Updated sandbox object.
+        """
+        data: SandboxCreateResponseDict = self._transport.request_json(
+            "POST", f"/v1/sandbox/{sandbox_id_of(sandbox)}/stop", expected_status=200,
+            timeout=http_timeout,
+        )
+        return self._wrap_sandbox(SandboxData.from_dict(data))
+
+    @intercept_errors("Failed to start sandbox: ")
+    def start(self, sandbox: SandboxRef, http_timeout: float | None = None) -> SandboxT | SandboxData | SandboxStatus:
+        """Start a previously stopped sandbox.
+
+        Args:
+            sandbox: Sandbox ID or object.
+            http_timeout: Optional HTTP request timeout in seconds for this SDK call.
+
+        Returns:
+            SandboxT | SandboxData | SandboxStatus: Current sandbox object after start completes.
+        """
+        sandbox_id = sandbox_id_of(sandbox)
+        self._transport.request_json(
+            "POST", f"/v1/sandbox/{sandbox_id}/start", expected_status=200,
+            timeout=http_timeout,
+        )
+        return self.get(sandbox_id, http_timeout=http_timeout)
 
     @intercept_errors("Failed to create snapshot: ")
     def create_snapshot(
