@@ -129,6 +129,32 @@ class AsyncSandbox(SandboxHandle):
         self._data = latest._data
         return self
 
+    async def stop(self, http_timeout: float | None = None) -> AsyncSandbox:
+        """Stop the sandbox and return updated metadata.
+
+        Args:
+            http_timeout: Optional HTTP request timeout in seconds for this SDK call.
+
+        Returns:
+            AsyncSandbox: This sandbox object with updated metadata.
+        """
+        latest = await self._client.sandboxes.stop(self, http_timeout=http_timeout)
+        self._data = latest._data
+        return self
+
+    async def start(self, http_timeout: float | None = None) -> AsyncSandbox:
+        """Start a previously stopped sandbox and return updated metadata.
+
+        Args:
+            http_timeout: Optional HTTP request timeout in seconds for this SDK call.
+
+        Returns:
+            AsyncSandbox: This sandbox object with updated metadata.
+        """
+        latest = await self._client.sandboxes.start(self, http_timeout=http_timeout)
+        self._data = latest._data
+        return self
+
     async def create_snapshot(
         self,
         *,
@@ -254,7 +280,7 @@ def _inject_otel_env(env_vars: dict[str, str] | None) -> dict[str, str] | None:
 
 
 class AsyncSandboxesClient(Generic[AsyncSandboxT]):
-    """Create, inspect, pause, and delete sandboxes asynchronously.
+    """Create, inspect, pause, stop, start, and delete sandboxes asynchronously.
 
     Attributes:
         None.
@@ -352,7 +378,7 @@ class AsyncSandboxesClient(Generic[AsyncSandboxT]):
         Returns:
             SandboxListResponse: Paginated sandbox summaries.
         """
-        valid_states = {"starting", "snapshotting", "running", "paused", "unpausing", "deleting"}
+        valid_states = {"starting", "stopping", "snapshotting", "running", "paused", "unpausing", "stopped", "deleting"}
         if state is not None and state not in valid_states:
             raise ValueError(f"state must be one of {sorted(valid_states)}")
         if sort not in {"created_at", "state"}:
@@ -403,6 +429,53 @@ class AsyncSandboxesClient(Generic[AsyncSandboxT]):
             timeout=http_timeout,
         )
         return self._wrap_sandbox(SandboxData.from_dict(data))
+
+    @intercept_errors("Failed to stop sandbox: ")
+    async def stop(
+        self,
+        sandbox: SandboxRef,
+        http_timeout: float | None = None,
+    ) -> AsyncSandboxT | SandboxData | SandboxStatus:
+        """Stop a running sandbox while preserving writable disk changes.
+
+        Args:
+            sandbox: Sandbox ID or object.
+            http_timeout: Optional HTTP request timeout in seconds for this SDK call.
+
+        Returns:
+            AsyncSandboxT | SandboxData | SandboxStatus: Updated sandbox object.
+        """
+        data: SandboxCreateResponseDict = await self._transport.request_json(
+            "POST",
+            f"/v1/sandbox/{sandbox_id_of(sandbox)}/stop",
+            expected_status=200,
+            timeout=http_timeout,
+        )
+        return self._wrap_sandbox(SandboxData.from_dict(data))
+
+    @intercept_errors("Failed to start sandbox: ")
+    async def start(
+        self,
+        sandbox: SandboxRef,
+        http_timeout: float | None = None,
+    ) -> AsyncSandboxT | SandboxData | SandboxStatus:
+        """Start a previously stopped sandbox.
+
+        Args:
+            sandbox: Sandbox ID or object.
+            http_timeout: Optional HTTP request timeout in seconds for this SDK call.
+
+        Returns:
+            AsyncSandboxT | SandboxData | SandboxStatus: Current sandbox object after start completes.
+        """
+        sandbox_id = sandbox_id_of(sandbox)
+        await self._transport.request_json(
+            "POST",
+            f"/v1/sandbox/{sandbox_id}/start",
+            expected_status=200,
+            timeout=http_timeout,
+        )
+        return await self.get(sandbox_id, http_timeout=http_timeout)
 
     @intercept_errors("Failed to create snapshot: ")
     async def create_snapshot(

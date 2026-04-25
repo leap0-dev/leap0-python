@@ -81,6 +81,42 @@ class TestAsyncSandboxesClient:
 
         asyncio.run(run())
 
+    def test_stop(self, async_mock_transport):
+        async def run() -> None:
+            async_mock_transport.request_json.return_value = {
+                "id": "sbx-1", "template_id": "tpl-1", "vcpu": 2, "memory": 1024,
+                "disk": 4096, "timeout": 300, "state": "stopped", "auto_pause": False, "created_at": "",
+            }
+
+            result = await AsyncSandboxesClient(async_mock_transport, sandbox_domain="s.dev").stop("sbx-1")
+
+            args, kwargs = async_mock_transport.request_json.call_args
+            assert args == ("POST", "/v1/sandbox/sbx-1/stop")
+            assert kwargs["expected_status"] == 200
+            assert result.state == "stopped"
+
+        asyncio.run(run())
+
+    def test_start(self, async_mock_transport):
+        async def run() -> None:
+            async_mock_transport.request_json.side_effect = [
+                {"id": "sbx-1", "state": "running"},
+                {
+                    "id": "sbx-1", "template_id": "tpl-1", "vcpu": 2, "memory": 1024,
+                    "disk": 4096, "timeout": 300, "state": "running", "auto_pause": False, "created_at": "",
+                },
+            ]
+
+            result = await AsyncSandboxesClient(async_mock_transport, sandbox_domain="s.dev").start("sbx-1")
+
+            calls = async_mock_transport.request_json.call_args_list
+            assert calls[0].args == ("POST", "/v1/sandbox/sbx-1/start")
+            assert calls[0].kwargs["expected_status"] == 200
+            assert calls[1].args == ("GET", "/v1/sandbox/sbx-1/")
+            assert result.state == "running"
+
+        asyncio.run(run())
+
     def test_factory_returns_async_sandbox(self, async_mock_transport):
         async def run() -> None:
             fake_client = SimpleNamespace(
@@ -332,6 +368,34 @@ class TestAsyncSandbox:
             await sandbox.pause(http_timeout=2.5)
 
             assert sandbox.state == "paused"
+
+        asyncio.run(run())
+
+    def test_stop_and_start_forward_http_timeout(self):
+        async def run() -> None:
+            sandboxes = SimpleNamespace()
+            fake_client = SimpleNamespace(
+                _filesystem=SimpleNamespace(), _git=SimpleNamespace(), _process=SimpleNamespace(), _pty=SimpleNamespace(),
+                _lsp=SimpleNamespace(), _ssh=SimpleNamespace(), _code_interpreter=SimpleNamespace(), _desktop=SimpleNamespace(),
+                sandboxes=sandboxes,
+            )
+
+            async def stop(sandbox: object, http_timeout: float | None = None):
+                assert http_timeout == 2.5
+                return AsyncSandbox(fake_client, Sandbox(id="sbx-1", state="stopped"))
+
+            async def start(sandbox: object, http_timeout: float | None = None):
+                assert http_timeout == 3.5
+                return AsyncSandbox(fake_client, Sandbox(id="sbx-1", state="running"))
+
+            sandboxes.stop = stop
+            sandboxes.start = start
+            sandbox = AsyncSandbox(fake_client, Sandbox(id="sbx-1", state="running"))
+
+            await sandbox.stop(http_timeout=2.5)
+            assert sandbox.state == "stopped"
+            await sandbox.start(http_timeout=3.5)
+            assert sandbox.state == "running"
 
         asyncio.run(run())
 

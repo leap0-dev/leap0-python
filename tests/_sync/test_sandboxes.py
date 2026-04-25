@@ -70,6 +70,36 @@ class TestSandboxesClient:
         assert kwargs["json"] == {"name": "snap-a", "kill_sandbox_after": True}
         assert result.id == "snap-1"
 
+    def test_stop(self, mock_transport):
+        mock_transport.request_json.return_value = {
+            "id": "sbx-1", "template_id": "tpl-1", "vcpu": 2, "memory": 1024,
+            "disk": 4096, "timeout": 300, "state": "stopped", "auto_pause": False, "created_at": "",
+        }
+
+        result = SandboxesClient(mock_transport, sandbox_domain="s.dev").stop("sbx-1")
+
+        args, kwargs = mock_transport.request_json.call_args
+        assert args == ("POST", "/v1/sandbox/sbx-1/stop")
+        assert kwargs["expected_status"] == 200
+        assert result.state == "stopped"
+
+    def test_start(self, mock_transport):
+        mock_transport.request_json.side_effect = [
+            {"id": "sbx-1", "state": "running"},
+            {
+                "id": "sbx-1", "template_id": "tpl-1", "vcpu": 2, "memory": 1024,
+                "disk": 4096, "timeout": 300, "state": "running", "auto_pause": False, "created_at": "",
+            },
+        ]
+
+        result = SandboxesClient(mock_transport, sandbox_domain="s.dev").start("sbx-1")
+
+        calls = mock_transport.request_json.call_args_list
+        assert calls[0].args == ("POST", "/v1/sandbox/sbx-1/start")
+        assert calls[0].kwargs["expected_status"] == 200
+        assert calls[1].args == ("GET", "/v1/sandbox/sbx-1/")
+        assert result.state == "running"
+
     def test_list(self, mock_transport):
         mock_transport.request_json.return_value = {
             "items": [{
@@ -418,6 +448,31 @@ class TestRichSandbox:
 
         sandboxes.pause.assert_called_once_with(sandbox, http_timeout=7.5)
         assert sandbox.state == "paused"
+
+    def test_stop_and_start_forward_http_timeout(self):
+        sandboxes = MagicMock()
+        client = SimpleNamespace(
+            _filesystem=MagicMock(),
+            _git=MagicMock(),
+            _process=MagicMock(),
+            _pty=MagicMock(),
+            _lsp=MagicMock(),
+            _ssh=MagicMock(),
+            _code_interpreter=MagicMock(),
+            _desktop=MagicMock(),
+            sandboxes=sandboxes,
+        )
+        sandbox = RichSandbox(client, Sandbox(id="sbx-1", state="running"))
+        sandboxes.stop.return_value = RichSandbox(client, Sandbox(id="sbx-1", state="stopped"))
+        sandboxes.start.return_value = RichSandbox(client, Sandbox(id="sbx-1", state="running"))
+
+        sandbox.stop(http_timeout=5.5)
+        assert sandbox.state == "stopped"
+        sandbox.start(http_timeout=6.5)
+
+        sandboxes.stop.assert_called_once_with(sandbox, http_timeout=5.5)
+        sandboxes.start.assert_called_once_with(sandbox, http_timeout=6.5)
+        assert sandbox.state == "running"
 
     def test_create_snapshot_delegates_to_sandboxes_client(self):
         sandboxes = MagicMock()
