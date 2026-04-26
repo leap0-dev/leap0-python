@@ -455,14 +455,13 @@ class SandboxesClient(Generic[SandboxT]):
             http_timeout: Optional HTTP request timeout in seconds for this SDK call.
 
         Returns:
-            SandboxT | SandboxData | SandboxStatus: Current sandbox object after start completes.
+            SandboxT | SandboxData | SandboxStatus: Updated sandbox object.
         """
-        sandbox_id = sandbox_id_of(sandbox)
-        self._transport.request_json(
-            "POST", f"/v1/sandbox/{sandbox_id}/start", expected_status=200,
+        data: SandboxCreateResponseDict = self._transport.request_json(
+            "POST", f"/v1/sandbox/{sandbox_id_of(sandbox)}/start", expected_status=200,
             timeout=http_timeout,
         )
-        return self.get(sandbox_id, http_timeout=http_timeout)
+        return self._wrap_sandbox(SandboxData.from_dict(data))
 
     @intercept_errors("Failed to create snapshot: ")
     def create_snapshot(
