@@ -84,20 +84,17 @@ class TestSandboxesClient:
         assert result.state == "stopped"
 
     def test_start(self, mock_transport):
-        mock_transport.request_json.side_effect = [
-            {"id": "sbx-1", "state": "running"},
-            {
-                "id": "sbx-1", "template_id": "tpl-1", "vcpu": 2, "memory": 1024,
-                "disk": 4096, "timeout": 300, "state": "running", "auto_pause": False, "created_at": "",
-            },
-        ]
+        mock_transport.request_json.return_value = {
+            "id": "sbx-1", "template_id": "tpl-1", "vcpu": 2, "memory": 1024,
+            "disk": 4096, "timeout": 300, "state": "running", "auto_pause": False, "created_at": "",
+        }
 
-        result = SandboxesClient(mock_transport, sandbox_domain="s.dev").start("sbx-1")
+        result = SandboxesClient(mock_transport, sandbox_domain="s.dev").start("sbx-1", http_timeout=5.0)
 
         calls = mock_transport.request_json.call_args_list
         assert calls[0].args == ("POST", "/v1/sandbox/sbx-1/start")
         assert calls[0].kwargs["expected_status"] == 200
-        assert calls[1].args == ("GET", "/v1/sandbox/sbx-1/")
+        assert calls[0].kwargs["timeout"] == 5.0
         assert result.state == "running"
 
     def test_list(self, mock_transport):
